@@ -208,6 +208,7 @@ public sealed interface Operation {
         public class Builder {
             public lateinit var subject: String
             public lateinit var sid: String
+            public lateinit var version: String
             public var replyTo: String? = null
             public var headers: HeadersBuilder = HeadersBuilder()
             public var payload: ByteReadPacket? = null
@@ -215,7 +216,8 @@ public sealed interface Operation {
             internal var hdrLen by Delegates.notNull<Int>()
             internal var totLen by Delegates.notNull<Int>()
 
-            public fun build(): MsgWithHeaders = MsgWithHeaders(subject, sid, replyTo, headers.build(), payload)
+            public fun build(): MsgWithHeaders =
+                MsgWithHeaders(subject, sid, replyTo, headers.build(), version, payload)
         }
     }
 

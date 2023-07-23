@@ -105,6 +105,7 @@ public class OperationParser : SynchronizedObject() {
             }
 
             "HMSG" -> {
+                /* read initial headers */
                 val builder = packet.ensureCRLF {
                     val args = packet
                         .readUntilCRLF()
@@ -124,12 +125,16 @@ public class OperationParser : SynchronizedObject() {
                     builder
                 }
 
+                /* read version, e.g., NATS/1.0 */
                 val version = packet.ensureCRLF(crlfBuff) {
                     packet.readUntilCRLF()
                 }
 
-                var read = version.remaining + 2
-                while (read < builder.hdrLen - 2) {
+                builder.version = version.copy().readText()
+
+                /* read headers */
+                var read = version.remaining + 4
+                while (read < builder.hdrLen) {
                     val header = packet.ensureCRLF(crlfBuff) { packet.readUntilCRLF() }
                     read += header.remaining + 2
 
@@ -145,8 +150,8 @@ public class OperationParser : SynchronizedObject() {
                 packet.ensureCRLF(crlfBuff)
 
                 /* read payload len */
-                val payloadLength = builder.totLen - read - 2
-                builder.payload = payloadLength.toInt().takeIf { it > 0 }
+                val payloadLength = builder.totLen - builder.hdrLen
+                builder.payload = payloadLength.takeIf { it > 0 }
                     ?.let(packet::readBytes)
                     ?.let(::ByteReadPacket)
 
