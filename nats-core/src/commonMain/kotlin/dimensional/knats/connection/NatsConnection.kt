@@ -88,7 +88,7 @@ public class NatsConnection {
                 }
 
                 is Operation.Err -> {
-                    val exp = NatsProtocolException(op)
+                    val exp = NatsException.fromErr(op)
                     log.warn(exp) { "Received a protocol exception:" }
                 }
 
@@ -127,16 +127,21 @@ public class NatsConnection {
             /* read the next packet from the channel. */
             val packet: ByteReadPacket = readNextPacket()
 
-            /* parse the packet into a NATS operation */
-            val operation = parser.parse(packet)
-            if (operation == null) {
-                packet.release()
-                continue
-            }
+            try {
+                /* parse the packet into a NATS operation */
+                val operation = parser.parse(packet)
+                if (operation == null) {
+                    packet.release()
+                    continue
+                }
 
-            /* emit it to the psyche ward */
-            log.debug { ">>> $operation" }
-            block(operation)
+                /* emit it to the psyche ward */
+                log.debug { ">>> $operation" }
+                block(operation)
+            } catch (ex: Throwable) {
+                packet.release()
+                log.warn(ex) { "Encountered an exception while handling operation:" }
+            }
         }
     }
 }

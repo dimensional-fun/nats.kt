@@ -1,6 +1,6 @@
 package dimensional.knats.protocol
 
-import dimensional.knats.connection.NatsProtocolException
+import dimensional.knats.connection.NatsException
 import dimensional.knats.tools.*
 import io.ktor.utils.io.core.*
 import kotlinx.atomicfu.locks.SynchronizedObject
@@ -135,7 +135,7 @@ public class OperationParser : SynchronizedObject() {
 
                     val name = header.readUntilDelimiter(COLON)
                     if (header.readByte() != COLON) {
-                        throw NatsProtocolException("Expected ':' after header name")
+                        throw NatsException.ProtocolException("Expected ':' after header name")
                     }
 
                     header.discardValues(WHITESPACE)
@@ -169,7 +169,7 @@ public class OperationParser : SynchronizedObject() {
                 Operation.Err(message)
             }
 
-            else -> throw NatsProtocolException("Unknown operation: $opName")
+            else -> throw NatsException.ProtocolException("Unknown operation: $opName")
         }
 
         packet.ensureCRLF(crlfBuff)
