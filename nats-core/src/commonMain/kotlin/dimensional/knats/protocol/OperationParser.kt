@@ -153,7 +153,7 @@ public class OperationParser : SynchronizedObject() {
                 builder.build()
             }
 
-            "PING" -> {
+            "PING", "PONG" -> {
                 if (opName == "PING") Operation.Ping else Operation.Pong
             }
 

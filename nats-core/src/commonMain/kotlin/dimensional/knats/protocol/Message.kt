@@ -25,8 +25,7 @@ public interface Message {
     public val headers: Headers?
 
     /**
-     * The payload of this message.
-     * Note: depending on the implementation this may just be a copy of the original payload.
+     * Get a copy of this message's [ByteReadPacket] (does not copy bytes).
      */
-    public val payload: ByteReadPacket?
+    public fun getPayload(): ByteReadPacket?
 }

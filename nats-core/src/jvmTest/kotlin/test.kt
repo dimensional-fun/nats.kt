@@ -14,7 +14,9 @@ suspend fun main(): Unit = coroutineScope {
     connection.operations.onEach { op ->
         when (op) {
             is Message -> {
-                println("[${op.sid}] received message on '${op.subject}': ${op.payload?.readText() ?: "--NO CONTENT--"}")
+                val payload = op.getPayload()
+                println("[${op.sid}] received message on '${op.subject}': ${payload?.readText() ?: "--NO CONTENT--"}")
+
                 op.headers
                     ?.takeUnless { it.isEmpty() }
                     ?.flattenEntries()

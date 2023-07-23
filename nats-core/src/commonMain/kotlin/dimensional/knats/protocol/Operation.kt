@@ -138,7 +138,7 @@ public sealed interface Operation {
 
         override val headers: Headers? get() = null
 
-        override val payload: ByteReadPacket? get() = packet?.copy()
+        override fun getPayload(): ByteReadPacket? = packet?.copy()
 
         override fun encodeOptions(out: Output) {
             out.writeArgument(subject, Output::writeSubject)
@@ -148,7 +148,7 @@ public sealed interface Operation {
 
             //
             out.writeCRLF()
-            payload?.let(out::writePacket)
+            packet?.copy()?.let(out::writePacket)
         }
 
         public class Builder {
@@ -173,7 +173,7 @@ public sealed interface Operation {
     ) : Message, Operation {
         override val tag: String get() = "HMSG"
 
-        override val payload: ByteReadPacket? get() = packet?.copy()
+        override fun getPayload(): ByteReadPacket? = packet?.copy()
 
         override fun encodeOptions(out: Output) {
             out.writeArgument(subject, Output::writeSubject)
@@ -194,7 +194,7 @@ public sealed interface Operation {
             val payload = buildPacket {
                 writePacket(headers)
                 writeCRLF()
-                payload?.let(::writePacket)
+                packet?.copy()?.let(::writePacket)
             }
 
             out.writeArgument(payload.remaining, Output::writeAsText)
