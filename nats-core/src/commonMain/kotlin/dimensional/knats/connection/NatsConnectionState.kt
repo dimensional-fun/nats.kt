@@ -1,18 +1,18 @@
 package dimensional.knats.connection
 
+import dimensional.knats.connection.transport.Transport
 import dimensional.kyuso.task.Task
-import io.ktor.network.sockets.*
 
 public sealed class NatsConnectionState {
     internal interface Active {
-        val conn: Connection
+        val ts: Transport
     }
 
     public data object Disconnected : NatsConnectionState()
 
-    public data class Connected(override val conn: Connection) : Active, NatsConnectionState()
+    public data class Connected(override val ts: Transport) : Active, NatsConnectionState()
 
-    public data class Running(override val conn: Connection, internal val readTask: Task) : Active,
+    public data class Running(override val ts: Transport, internal val readTask: Task) : Active,
         NatsConnectionState()
 
     public data object Detached : NatsConnectionState()

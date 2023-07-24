@@ -1,17 +1,17 @@
 package dimensional.knats.connection
 
+import dimensional.knats.connection.transport.TcpTransport
+import dimensional.knats.connection.transport.Transport
 import dimensional.knats.protocol.NatsConnectOptions
 import dimensional.knats.protocol.Operation
 import dimensional.knats.protocol.OperationParser
 import dimensional.kyuso.Kyuso
-import io.ktor.network.selector.*
-import io.ktor.network.sockets.*
-import io.ktor.utils.io.*
 import io.ktor.utils.io.core.*
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.*
 import naibu.ext.intoOrNull
 import naibu.logging.logging
+import kotlin.coroutines.coroutineContext
 import kotlin.time.Duration
 import kotlin.time.TimeMark
 import kotlin.time.TimeSource
@@ -23,7 +23,7 @@ public class NatsConnection {
         private val log by logging { }
     }
 
-    private val scope = CoroutineScope(Dispatchers.IO + SupervisorJob() + CoroutineName("Connection"))
+    internal val scope: CoroutineScope = CoroutineScope(Dispatchers.IO + SupervisorJob() + CoroutineName("Connection"))
     private val kyuso = Kyuso(scope)
 
     private val mutableState = MutableStateFlow<NatsConnectionState>(NatsConnectionState.Disconnected)
@@ -44,7 +44,7 @@ public class NatsConnection {
             "This connection is not running."
         }
 
-        state.conn.output.writeOperation(op)
+        state.ts.write(op)
     }
 
     public fun disconnect() {
@@ -53,32 +53,25 @@ public class NatsConnection {
         }
     }
 
-    public suspend fun connect() {
+    public suspend fun connect(host: String, port: Int) {
         require(state.value is NatsConnectionState.Disconnected) {
             "This connection has already been connected."
         }
 
-        val connection = aSocket(SelectorManager(scope.coroutineContext))
-            .tcp()
-            .connect(InetSocketAddress("154.53.33.228", 4222))
-            .connection()
+        val ts = TcpTransport.connect(host, port)
+        log.debug { "Connected to NATS server" }
 
-        log.debug { "Connected to ${connection.socket.remoteAddress}" }
-
-        mutableState.update { NatsConnectionState.Connected(connection) }
+        mutableState.update { NatsConnectionState.Connected(ts) }
 
         //
         var lastPing: TimeMark? = null
         start { op ->
             when (op) {
-                is Operation.Info -> {
-                    val connect = Operation.Connect(NatsConnectOptions.DEFAULT)
-                    connection.output.writeOperation(connect)
-                }
+                is Operation.Info -> ts.write(Operation.Connect(NatsConnectOptions.DEFAULT))
 
                 is Operation.Ping -> {
                     lastPing = TimeSource.Monotonic.markNow()
-                    connection.output.writeOperation(Operation.Pong)
+                    ts.write(Operation.Pong)
                 }
 
                 is Operation.Pong -> {
@@ -92,40 +85,36 @@ public class NatsConnection {
                     log.warn(exp) { "Received a protocol exception:" }
                 }
 
-                else -> operations.emit(op)
+                else -> {
+                    operations.emit(op)
+                }
             }
         }
     }
 
     private fun start(block: suspend (Operation) -> Unit) {
         /* make sure this connection is active. */
-        val (conn) = requireNotNull(state.value as? NatsConnectionState.Connected) {
+        val (ts) = requireNotNull(state.value as? NatsConnectionState.Connected) {
             "This connection has been detached or is already running."
         }
 
         val task = kyuso.dispatch {
-            conn.input.readOperations(block)
+            ts.readOperations(block)
         }
 
-        mutableState.update { NatsConnectionState.Running(conn, task) }
+        mutableState.update { NatsConnectionState.Running(ts, task) }
     }
 
-    private suspend fun ByteWriteChannel.writeOperation(operation: Operation) {
+    private suspend fun Transport.write(operation: Operation) {
         log.debug { "<<< $operation" }
-        writePacket { operation.encode(this) }
-        flush()
+        write { operation.encode(this) }
     }
 
-    private suspend fun ByteReadChannel.readNextPacket(): ByteReadPacket {
-        awaitContent()
-        return readPacket(availableForRead)
-    }
-
-    private suspend fun ByteReadChannel.readOperations(block: suspend (Operation) -> Unit) {
+    private suspend fun Transport.readOperations(block: suspend (Operation) -> Unit) {
         val parser = OperationParser()
-        while (currentCoroutineContext().isActive && !isClosedForRead) {
+        while (coroutineContext.isActive) {
             /* read the next packet from the channel. */
-            val packet: ByteReadPacket = readNextPacket()
+            val packet: ByteReadPacket = read()
 
             try {
                 /* parse the packet into a NATS operation */
