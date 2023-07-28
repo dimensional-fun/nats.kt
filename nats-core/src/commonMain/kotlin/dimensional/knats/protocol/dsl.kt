@@ -16,7 +16,7 @@ import kotlin.contracts.ExperimentalContracts
 import kotlin.contracts.InvocationKind
 import kotlin.contracts.contract
 
-internal fun Char.estimateOpLength(): Int? = when (uppercaseChar()) {
+internal fun Byte.estimateOpLength(): Int? = when (toInt().toChar().uppercaseChar()) {
     'M', '+' -> 3
     'I', 'H', 'P', '-' -> 4
     'C' -> 7

@@ -18,3 +18,5 @@ public fun CoroutineScope.child(
     val job = if (supervisor) SupervisorJob(coroutineContext.job) else Job(coroutineContext.job)
     return CoroutineScope(coroutineContext + job + context)
 }
+
+public fun Byte.toChar(): Char = toInt().toChar()

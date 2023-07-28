@@ -78,18 +78,14 @@ internal suspend fun ByteReadChannel.peekTo(dst: Memory, dstOffset: Long, offset
     return copying
 }
 
-internal suspend fun ByteReadChannel.tryPeek(offset: Long = 0): Int {
-    if (availableForRead < 1) {
-        return -1
-    }
-
+internal suspend fun ByteReadChannel.tryPeek(offset: Long = 0): Byte {
     return SmallMemoryPool.use {
-        read { source, start, _ ->
+        read(1) { source, start, _ ->
             source.copyTo(it.ktor(), start + offset, 1, 0)
             0
         }
 
-        it.load(0).asInt()
+        it.load(0)
     }
 }
 

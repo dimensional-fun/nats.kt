@@ -10,6 +10,7 @@ import dimensional.knats.tools.ktor.readFully
 import dimensional.knats.tools.ktor.readUntilDelimiter
 import dimensional.knats.tools.ktor.tryPeek
 import io.ktor.utils.io.*
+import naibu.common.pool.use
 import naibu.ext.print
 import naibu.io.SmallMemoryPool
 import naibu.io.slice.get
@@ -163,20 +164,14 @@ public open class DefaultOperationParser : OperationParser {
         opDecoders[op] = block
     }
 
-    protected suspend fun parseOperationName(ch: ByteReadChannel): String? {
-        val opBuffer = SmallMemoryPool.take()
+    protected suspend fun parseOperationName(ch: ByteReadChannel): String? = SmallMemoryPool.use { opBuffer ->
+        /* peek the first byte estimate the number of bytes to read for the OP name */
+        val opLength = ch.tryPeek().estimateOpLength() ?: return null
 
-        /* peek the first byte (it doesn't really matter if it returns -1)
-          & estimate the number of bytes to read for the OP name */
-        val opLength = ch.tryPeek()
-            .toChar()
-            .estimateOpLength()
-            ?: return null
-
-        /* read the estimated number of bytes into the op buffer */
+        //
         ch.readFully(opBuffer, 0, opLength)
 
-        /* create a slice w/ then length of the op & decode it as a string */
-        return opBuffer[0..<opLength].decodeIntoString().uppercase()
+        /* only use `opLength` bytes from the buffer when decoding */
+        opBuffer[0..<opLength].decodeIntoString().uppercase()
     }
 }
