@@ -1,13 +1,13 @@
 package dimensional.knats.protocol
 
-import dimensional.knats.tools.Json
 import dimensional.knats.tools.SPACE
-import dimensional.knats.tools.writeCRLF
+import dimensional.knats.tools.ktor.writeCRLF
 import io.ktor.http.*
 import io.ktor.util.*
 import io.ktor.utils.io.core.*
 import kotlinx.serialization.Serializable
 import naibu.serialization.DefaultFormats
+import naibu.serialization.json.Json
 import kotlin.jvm.JvmInline
 import kotlin.properties.Delegates
 

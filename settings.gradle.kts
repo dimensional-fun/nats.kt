@@ -1,8 +1,12 @@
 enableFeaturePreview("TYPESAFE_PROJECT_ACCESSORS")
 
 include(":nats-core")
+include(":nats-core:transport-tcp")
+include(":nats-core:transport-ws")
 include(":nats-jetstream")
 include(":nats-micro")
+
+include(":dev")
 
 rootProject.name = "nats"
 
@@ -21,6 +25,10 @@ fun VersionCatalogBuilder.ktor() {
     library("ktor-network",     "io.ktor", "ktor-network").versionRef(ktor)
     library("ktor-network-tls", "io.ktor", "ktor-network-tls").versionRef(ktor)
     library("ktor-io",          "io.ktor", "ktor-io").versionRef(ktor)
+    library("ktor-http",        "io.ktor", "ktor-http").versionRef(ktor)
+
+    library("ktor-client-core",       "io.ktor", "ktor-client-core").versionRef(ktor)
+    library("ktor-client-websockets", "io.ktor", "ktor-client-websockets").versionRef(ktor)
 }
 
 fun VersionCatalogBuilder.common() {

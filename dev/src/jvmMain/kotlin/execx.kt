@@ -1,0 +1,1 @@
+public suspend fun main(): Unit = bruh()

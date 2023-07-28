@@ -1,134 +1,108 @@
 package dimensional.knats.connection
 
-import dimensional.knats.connection.transport.TcpTransport
 import dimensional.knats.connection.transport.Transport
-import dimensional.knats.protocol.NatsConnectOptions
 import dimensional.knats.protocol.Operation
-import dimensional.knats.protocol.OperationParser
+import dimensional.knats.tools.child
 import dimensional.kyuso.Kyuso
-import io.ktor.utils.io.core.*
-import kotlinx.coroutines.*
+import kotlinx.coroutines.CoroutineName
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.*
+import kotlinx.coroutines.isActive
 import naibu.ext.intoOrNull
 import naibu.logging.logging
+import naibu.monads.unwrapOkOrElse
 import kotlin.coroutines.coroutineContext
-import kotlin.time.Duration
-import kotlin.time.TimeMark
-import kotlin.time.TimeSource
 
 // TODO: refactor connection state, it's pretty bad lol
 
-public class NatsConnection {
+public class NatsConnection(public val resources: NatsResources) {
     public companion object {
         private val log by logging { }
     }
 
-    internal val scope: CoroutineScope = CoroutineScope(Dispatchers.IO + SupervisorJob() + CoroutineName("Connection"))
-    private val kyuso = Kyuso(scope)
-
-    private val mutableState = MutableStateFlow<NatsConnectionState>(NatsConnectionState.Disconnected)
-    private val mutableLatency = MutableStateFlow<Duration?>(null)
+    /** Used for connecting to different NATS servers. */
+    private val connector = NatsConnector(resources)
 
     /**
-     * The operations sent by the NATS server.
+     *
      */
-    public val operations: MutableSharedFlow<Operation> = MutableSharedFlow(extraBufferCapacity = Int.MAX_VALUE)
+    public val scope: CoroutineScope = connector.scope.child(CoroutineName("Connection"))
+
+    //
+
+    /** Used for scheduling tasks */
+    private val kyuso = Kyuso(scope)
+
+    //
+    private val mutableState = MutableStateFlow<NatsConnectionState>(NatsConnectionState.Disconnected)
+    private val mutableOperations = MutableSharedFlow<Operation>(extraBufferCapacity = Int.MAX_VALUE)
 
     /**
      * The current state of this NATS connection.
      */
-    public val state: StateFlow<NatsConnectionState> = mutableState.asStateFlow()
+    public val state: StateFlow<NatsConnectionState> get() = mutableState.asStateFlow()
 
+    /**
+     *
+     */
+    public val operations: SharedFlow<Operation> get() = mutableOperations
+
+    /**
+     *
+     */
     public suspend fun send(op: Operation) {
-        val state = requireNotNull(state.value.intoOrNull<NatsConnectionState.Active>()) {
+        val (ts) = requireNotNull(state.value.intoOrNull<NatsConnectionState.Connected>()) {
             "This connection is not running."
         }
 
-        state.ts.write(op)
+        ts.write(op)
+        ts.flush()
     }
 
-    public fun disconnect() {
-        require(state.value is NatsConnectionState.Connected || state.value is NatsConnectionState.Running) {
-            "This NATS connection is not connected or has been detached."
-        }
-    }
+    /**
+     *
+     */
+    public suspend fun connect() {
+        val ts = connector.connect().unwrapOkOrElse { throw it }
 
-    public suspend fun connect(host: String, port: Int) {
-        require(state.value is NatsConnectionState.Disconnected) {
-            "This connection has already been connected."
-        }
-
-        val ts = TcpTransport.connect(host, port)
-        log.debug { "Connected to NATS server" }
-
-        mutableState.update { NatsConnectionState.Connected(ts) }
-
-        //
-        var lastPing: TimeMark? = null
-        start { op ->
-            when (op) {
-                is Operation.Info -> ts.write(Operation.Connect(NatsConnectOptions.DEFAULT))
-
-                is Operation.Ping -> {
-                    lastPing = TimeSource.Monotonic.markNow()
-                    ts.write(Operation.Pong)
-                }
-
-                is Operation.Pong -> {
-                    val latency = lastPing?.elapsedNow()
-                    mutableLatency.emit(latency)
-                    log.debug { "Latency has been updated: ${latency ?: "N/A"}" }
-                }
-
-                is Operation.Err -> {
-                    val exp = NatsException.fromErr(op)
-                    log.warn(exp) { "Received a protocol exception:" }
-                }
-
-                else -> {
-                    operations.emit(op)
+        /* start reading operations lol. */
+        val reader = kyuso.dispatch {
+            ts.readOperations {
+                when (it) {
+                    is Operation.Ping -> send(Operation.Pong)
+                    else -> mutableOperations.emit(it)
                 }
             }
         }
+
+        /* upgrade the connection. */
+        mutableState.update { NatsConnectionState.Connected(ts, reader) }
     }
 
-    private fun start(block: suspend (Operation) -> Unit) {
-        /* make sure this connection is active. */
-        val (ts) = requireNotNull(state.value as? NatsConnectionState.Connected) {
-            "This connection has been detached or is already running."
+    /**
+     *
+     */
+    public suspend fun disconnect() {
+        val (ts, reader) = requireNotNull(state.value.intoOrNull<NatsConnectionState.Connected>()) {
+            "This NATS connection is not connected or has been detached."
         }
 
-        val task = kyuso.dispatch {
-            ts.readOperations(block)
-        }
+        /* cancel the operation reader & close the transport. */
+        reader.cancel()
+        ts.close()
 
-        mutableState.update { NatsConnectionState.Running(ts, task) }
-    }
-
-    private suspend fun Transport.write(operation: Operation) {
-        log.debug { "<<< $operation" }
-        write { operation.encode(this) }
+        /*  */
+        mutableState.update { NatsConnectionState.Disconnected }
     }
 
     private suspend fun Transport.readOperations(block: suspend (Operation) -> Unit) {
-        val parser = OperationParser()
         while (coroutineContext.isActive) {
-            /* read the next packet from the channel. */
-            val packet: ByteReadPacket = read()
+            val operation = readOperation(resources.parser)
+                ?: continue
 
             try {
-                /* parse the packet into a NATS operation */
-                val operation = parser.parse(packet)
-                if (operation == null) {
-                    packet.release()
-                    continue
-                }
-
-                /* emit it to the psyche ward */
-                log.debug { ">>> $operation" }
                 block(operation)
             } catch (ex: Throwable) {
-                packet.release()
                 log.warn(ex) { "Encountered an exception while handling operation:" }
             }
         }

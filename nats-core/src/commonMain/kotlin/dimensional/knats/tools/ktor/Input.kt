@@ -1,15 +1,7 @@
-package dimensional.knats.tools
+package dimensional.knats.tools.ktor
 
 import io.ktor.utils.io.bits.*
 import io.ktor.utils.io.core.*
-import naibu.text.charset.Charset
-
-internal fun Output.writeCRLF() = writeFully(CRLF)
-
-internal fun Output.writeTextNaibu(value: CharSequence, charset: Charset) {
-    val bytes = charset.encode(value.toString(), value.indices)
-    writeFully(bytes)
-}
 
 internal fun Input.readUntilDelimiter(delimiter: Byte) = buildPacket {
     readUntilDelimiter(delimiter, this)
@@ -42,6 +34,3 @@ internal fun Buffer.discardValues(values: ByteArray): Int {
 
     return discarded
 }
-
-internal fun String.escape() = replace("\n", "\\n").replace("\r", "\\r")
-

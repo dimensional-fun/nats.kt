@@ -21,8 +21,6 @@ kotlin {
     linuxX64()
 
     sourceSets["commonMain"].dependencies {
-        implementation("io.ktor:ktor-network:2.3.2")
-        implementation("io.ktor:ktor-network-tls:2.3.2")
         implementation("io.ktor:ktor-io:2.3.2")
         implementation("io.ktor:ktor-http:2.3.2")
 
@@ -39,11 +37,6 @@ kotlin {
 
         implementation("org.jetbrains.kotlinx:kotlinx-serialization-core:1.5.1")
         implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.5.1")
-    }
-
-    sourceSets["jvmTest"].dependencies {
-        implementation("org.slf4j:slf4j-api:2.0.3")
-        implementation("ch.qos.logback:logback-classic:1.4.8")
     }
 }
 

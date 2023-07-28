@@ -1,25 +1,26 @@
 package dimensional.knats.connection.transport
 
+import io.ktor.utils.io.*
 import io.ktor.utils.io.core.*
 
 public interface Transport {
     /**
+     * Bytes being written to the socket by the NATS server.
+     */
+    public val incoming: ByteReadChannel
+
+    /**
      * Close the connection.
      */
-    public fun close()
+    public suspend fun close()
 
     /**
-     * Write a packet to the connection.
+     * Upgrade the connection to a TLS connection if needed.
      */
+    public suspend fun upgradeTLS(): Transport
+
+    //
     public suspend fun write(packet: ByteReadPacket)
-
-    /**
-     *
-     */
     public suspend fun write(block: BytePacketBuilder.() -> Unit): Unit = write(buildPacket(block))
-
-    /**
-     * Read a packet from the connection, suspends until data is available.
-     */
-    public suspend fun read(): ByteReadPacket
+    public suspend fun flush()
 }
