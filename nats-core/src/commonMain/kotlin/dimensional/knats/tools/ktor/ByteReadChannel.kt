@@ -6,30 +6,32 @@ import io.ktor.utils.io.bits.*
 import io.ktor.utils.io.core.*
 import naibu.common.pool.use
 import naibu.ext.ktor.io.ktor
+import naibu.ext.ktor.io.naibu
 import naibu.io.SmallMemoryPool
 import naibu.io.memory.Memory
 import naibu.io.memory.get
-import naibu.math.bit.asInt
+import naibu.io.memory.set
+import naibu.io.slice.get
+import naibu.math.toIntSafe
+import io.ktor.utils.io.bits.Memory as KtorMemory
 
 /**
  * Copies bytes into [out] until either provided delimiters occur.
  */
-public suspend fun ByteReadChannel.readUntilDelimitersTo(a: Byte, b: Byte, out: Output): Int {
+public suspend fun ByteReadChannel.readUntilDelimitersTo(delimiters: ByteArray, out: Output): Int {
     var done = false
     var copiedTotal = 0
     while (!done && !isClosedForRead) {
         read { memory, start, end ->
             var i = 0
-            while (i + start < end) when (val value = memory[i + start]) {
-                a, b -> {
+            for (value in memory.naibu()[start.toIntSafe()..<end.toIntSafe()]) {
+                if (value in delimiters) {
                     done = true
                     break
                 }
 
-                else -> {
-                    i++
-                    out.writeByte(value)
-                }
+                i++
+                out.writeByte(value)
             }
 
             copiedTotal += i
@@ -43,10 +45,10 @@ public suspend fun ByteReadChannel.readUntilDelimitersTo(a: Byte, b: Byte, out: 
 internal suspend fun ByteReadChannel.discardValues(values: ByteArray): Long = SmallMemoryPool.use { peeked ->
     var copiedTotal = 0L
     var done = false
-    outer@ while (!done && !isClosedForRead) {
+    while (!done && !isClosedForRead) {
         awaitContent()
 
-        val copied = peekTo(peeked, 0, 0, peeked.size)
+        val copied = peekTo(peeked, 0, peeked.size32)
         if (copied < 1) continue
 
         var i = 0L
@@ -67,32 +69,36 @@ internal suspend fun ByteReadChannel.discardValues(values: ByteArray): Long = Sm
     return copiedTotal
 }
 
-internal suspend fun ByteReadChannel.peekTo(dst: Memory, dstOffset: Long, offset: Long, length: Long): Long {
-    var copying = length
-    read { source, start, endExclusive ->
-        copying = length.coerceAtMost((start..<endExclusive).size.toLong())
-        source.copyTo(dst.ktor(), start + offset, copying, dstOffset)
+internal suspend fun ByteReadChannel.readA(size: Int, block: (source: KtorMemory, range: LongRange) -> Int): Int =
+    read(size) { source, start, end -> block(source, start..<end) }
+
+internal fun KtorMemory.copyTo(dst: Memory, dstOffset: Long, range: LongRange) =
+    copyTo(dst.ktor(), range.first, range.size, dstOffset)
+
+internal suspend fun ByteReadChannel.peekTo(dst: Memory, dstOffset: Long, length: Int): Long {
+    var copying = length.toLong()
+    readA(length) { s, r ->
+        copying = copying.coerceAtMost(r.size)
+        s.copyTo(dst, dstOffset, r.first..<copying)
         0
     }
 
     return copying
 }
 
-internal suspend fun ByteReadChannel.tryPeek(offset: Long = 0): Byte {
-    return SmallMemoryPool.use {
-        read(1) { source, start, _ ->
-            source.copyTo(it.ktor(), start + offset, 1, 0)
-            0
-        }
-
-        it.load(0)
+internal suspend fun ByteReadChannel.tryPeek(offset: Long = 0): Byte = SmallMemoryPool.use {
+    readA(1) { source, range ->
+        it[0] = source[range.first + offset]
+        0
     }
+
+    it.load(0)
 }
 
 internal suspend fun ByteReadChannel.readFully(dst: Memory, offset: Long, length: Int) {
     var read = 0
     while (read < length) read { source, start, end ->
-        val copying = (length - read).coerceAtMost((start..<end).size)
+        val copying = (length - read).coerceAtMost((start..<end).size.toInt())
         source.copyTo(dst.ktor(), start, copying.toLong(), offset + read)
         read += copying
         copying

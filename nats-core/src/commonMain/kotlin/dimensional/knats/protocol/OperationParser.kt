@@ -11,5 +11,5 @@ public interface OperationParser {
     /**
      *
      */
-    public suspend fun parse(packet: ByteReadChannel): Operation?
+    public suspend fun parse(channel: ByteReadChannel): Operation
 }

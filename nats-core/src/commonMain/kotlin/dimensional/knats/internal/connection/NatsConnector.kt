@@ -1,7 +1,10 @@
-package dimensional.knats.connection
+package dimensional.knats.internal.connection
 
-import dimensional.knats.connection.expect
-import dimensional.knats.connection.transport.Transport
+import dimensional.knats.internal.NatsResources
+import dimensional.knats.internal.transport.Transport
+import dimensional.knats.internal.transport.expect
+import dimensional.knats.internal.transport.readOperation
+import dimensional.knats.internal.transport.write
 import dimensional.knats.protocol.NatsConnectOptions
 import dimensional.knats.protocol.NatsServerAddress
 import dimensional.knats.protocol.Operation
@@ -69,7 +72,6 @@ public data class NatsConnector(val resources: NatsResources) {
             when (val op = ts.readOperation(resources.parser)) {
                 is Operation.Pong -> break
                 is Operation.Ping -> ts.write(Operation.Pong)
-                null -> error("Connection Closed")
                 else -> error("Expected 'PING' or 'PONG' got $op")
             }
         }

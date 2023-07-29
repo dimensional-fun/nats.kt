@@ -1,11 +1,17 @@
-package dimensional.knats.connection
+package dimensional.knats.internal.connection
 
-import dimensional.knats.connection.transport.Transport
+import dimensional.knats.Connection
+import dimensional.knats.annotations.InternalNatsApi
+import dimensional.knats.internal.NatsResources
+import dimensional.knats.internal.transport.Transport
+import dimensional.knats.internal.transport.readOperation
+import dimensional.knats.internal.transport.write
 import dimensional.knats.protocol.Operation
 import dimensional.knats.tools.child
 import dimensional.kyuso.Kyuso
 import kotlinx.coroutines.CoroutineName
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.cancel
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.isActive
 import naibu.ext.intoOrNull
@@ -13,9 +19,8 @@ import naibu.logging.logging
 import naibu.monads.unwrapOkOrElse
 import kotlin.coroutines.coroutineContext
 
-// TODO: refactor connection state, it's pretty bad lol
-
-public class NatsConnection(public val resources: NatsResources) {
+@OptIn(InternalNatsApi::class)
+public class NatsConnection(public val resources: NatsResources) : Connection {
     public companion object {
         private val log by logging { }
     }
@@ -23,46 +28,27 @@ public class NatsConnection(public val resources: NatsResources) {
     /** Used for connecting to different NATS servers. */
     private val connector = NatsConnector(resources)
 
-    /**
-     *
-     */
-    public val scope: CoroutineScope = connector.scope.child(CoroutineName("Connection"))
+    override val scope: CoroutineScope = connector.scope.child(CoroutineName("Connection"))
 
-    //
-
-    /** Used for scheduling tasks */
-    private val kyuso = Kyuso(scope)
+    internal val kyuso = Kyuso(scope)
 
     //
     private val mutableState = MutableStateFlow<NatsConnectionState>(NatsConnectionState.Disconnected)
     private val mutableOperations = MutableSharedFlow<Operation>(extraBufferCapacity = Int.MAX_VALUE)
 
-    /**
-     * The current state of this NATS connection.
-     */
-    public val state: StateFlow<NatsConnectionState> get() = mutableState.asStateFlow()
+    override val state: StateFlow<NatsConnectionState> = mutableState.asStateFlow()
+    override val operations: SharedFlow<Operation> = mutableOperations
 
-    /**
-     *
-     */
-    public val operations: SharedFlow<Operation> get() = mutableOperations
-
-    /**
-     *
-     */
-    public suspend fun send(op: Operation) {
+    override suspend fun send(operation: Operation) {
         val (ts) = requireNotNull(state.value.intoOrNull<NatsConnectionState.Connected>()) {
             "This connection is not running."
         }
 
-        ts.write(op)
+        ts.write(operation)
         ts.flush()
     }
 
-    /**
-     *
-     */
-    public suspend fun connect() {
+    override suspend fun connect() {
         val ts = connector.connect().unwrapOkOrElse { throw it }
 
         /* start reading operations lol. */
@@ -79,10 +65,7 @@ public class NatsConnection(public val resources: NatsResources) {
         mutableState.update { NatsConnectionState.Connected(ts, reader) }
     }
 
-    /**
-     *
-     */
-    public suspend fun disconnect() {
+    override suspend fun disconnect() {
         val (ts, reader) = requireNotNull(state.value.intoOrNull<NatsConnectionState.Connected>()) {
             "This NATS connection is not connected or has been detached."
         }
@@ -95,11 +78,18 @@ public class NatsConnection(public val resources: NatsResources) {
         mutableState.update { NatsConnectionState.Disconnected }
     }
 
+    override suspend fun detach() {
+        try {
+            disconnect()
+        } finally {
+            scope.cancel()
+            mutableState.update { NatsConnectionState.Disconnected }
+        }
+    }
+
     private suspend fun Transport.readOperations(block: suspend (Operation) -> Unit) {
         while (coroutineContext.isActive) {
             val operation = readOperation(resources.parser)
-                ?: continue
-
             try {
                 block(operation)
             } catch (ex: Throwable) {

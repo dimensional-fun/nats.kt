@@ -4,6 +4,7 @@ import dimensional.knats.tools.SPACE
 import dimensional.knats.tools.ktor.writeCRLF
 import io.ktor.http.*
 import io.ktor.util.*
+import io.ktor.utils.io.*
 import io.ktor.utils.io.core.*
 import kotlinx.serialization.Serializable
 import naibu.serialization.DefaultFormats
@@ -79,18 +80,55 @@ public sealed interface Operation {
      *
      * - [Protocol Page](https://docs.nats.io/reference/reference-protocols/nats-protocol#pub)
      */
-    public data class Pub(val subject: String, val replyTo: String?, val payload: ByteReadPacket?) :
-        Operation {
+    public data class Pub(
+        override val subject: String,
+        override val replyTo: String?,
+        override val body: PublicationBody,
+    ) : Operation, Publication {
         override val tag: String get() = "PUB"
 
         override fun encodeOptions(out: Output) {
             out.writeArgument(subject, Output::writeSubject)
             out.writeArgument(replyTo, Output::writeText)
-            out.writeArgument(payload?.remaining ?: 0, Output::writeAsText)
+
+            //
+            out.writeArgument(body.size, Output::writeAsText)
+            out.writeCRLF()
+            body.write(out)
+        }
+    }
+
+    public data class PubWithHeaders(
+        override val subject: String,
+        override val replyTo: String?,
+        override val headers: Headers,
+        override val body: PublicationBody,
+    ) : Operation, Publication {
+        override val tag: String get() = "HPUB"
+
+        override fun encodeOptions(out: Output) {
+            out.writeArgument(subject, Output::writeSubject)
+            out.writeArgument(replyTo, Output::writeText)
+
+            val headers = buildPacket {
+                writeText("NATS/1.0")
+                writeCRLF()
+
+                for ((name, value) in headers.flattenEntries()) {
+                    writeText("$name: $value")
+                    writeCRLF()
+                }
+
+                writeCRLF()
+            }
+
+            out.writeArgument(headers.remaining, Output::writeAsText)
+            out.writeArgument(headers.remaining + body.size, Output::writeAsText)
 
             //
             out.writeCRLF()
-            payload?.let(out::writePacket)
+            out.writePacket(headers)
+            body.write(out)
         }
     }
 
@@ -133,7 +171,7 @@ public sealed interface Operation {
         override val sid: String,
         override val replyTo: String?,
         private val packet: ByteReadPacket?
-    ) : Message, Operation {
+    ) : Delivery, Operation {
         override val tag: String get() = "MSG"
 
         override val headers: Headers? get() = null
@@ -171,7 +209,7 @@ public sealed interface Operation {
         override val headers: Headers,
         val version: String,
         private val packet: ByteReadPacket?
-    ) : Message, Operation {
+    ) : Delivery, Operation {
         override val tag: String get() = "HMSG"
 
         override fun getPayload(): ByteReadPacket? = packet?.copy()

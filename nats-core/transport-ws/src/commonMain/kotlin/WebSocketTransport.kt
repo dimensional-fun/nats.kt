@@ -1,5 +1,5 @@
-import dimensional.knats.connection.transport.Transport
-import dimensional.knats.connection.transport.TransportFactory
+import dimensional.knats.internal.transport.Transport
+import dimensional.knats.internal.transport.TransportFactory
 import dimensional.knats.protocol.NatsServerAddress
 import io.ktor.client.*
 import io.ktor.client.engine.cio.*

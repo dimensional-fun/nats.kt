@@ -33,7 +33,7 @@ fun VersionCatalogBuilder.ktor() {
 
 fun VersionCatalogBuilder.common() {
     /* naibu */
-    val naibu = version("naibu", "1.1-RC.2")
+    val naibu = version("naibu", "1.2-RC.3")
 
     library("naibu-core",    "naibu.stdlib", "naibu-core").versionRef(naibu)
     library("naibu-io",      "naibu.stdlib", "naibu-io").versionRef(naibu)

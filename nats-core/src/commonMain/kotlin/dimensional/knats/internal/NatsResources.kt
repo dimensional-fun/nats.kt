@@ -1,6 +1,6 @@
-package dimensional.knats.connection
+package dimensional.knats.internal
 
-import dimensional.knats.connection.transport.TransportFactory
+import dimensional.knats.internal.transport.TransportFactory
 import dimensional.knats.protocol.NatsServerAddress
 import dimensional.knats.protocol.OperationParser
 import dimensional.knats.protocol.impl.DefaultOperationParser

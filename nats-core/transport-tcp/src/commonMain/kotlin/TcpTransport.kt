@@ -1,10 +1,12 @@
-package dimensional.knats.connection.transport
+package dimensional.knats.internal.transport
 
 import dimensional.knats.protocol.NatsServerAddress
 import io.ktor.network.selector.*
 import io.ktor.network.sockets.*
 import io.ktor.utils.io.*
 import io.ktor.utils.io.core.*
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import kotlin.coroutines.CoroutineContext
 
 public class TcpTransport(internal val inner: Connection) : Transport {
@@ -17,6 +19,7 @@ public class TcpTransport(internal val inner: Connection) : Transport {
         )
     }
 
+    private val writeMutex = Mutex()
     override val incoming: ByteReadChannel get() = inner.input
 
     override suspend fun close() {
@@ -26,7 +29,7 @@ public class TcpTransport(internal val inner: Connection) : Transport {
 
     override suspend fun upgradeTLS(): TcpTransport = upgradeTlsNative(inner)
 
-    override suspend fun write(packet: ByteReadPacket) {
+    override suspend fun write(packet: ByteReadPacket): Unit = writeMutex.withLock {
         inner.output.writePacket(packet)
     }
 

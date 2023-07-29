@@ -1,23 +1,30 @@
-package dimensional.knats.connection
+package dimensional.knats.internal.transport
 
-import dimensional.knats.connection.transport.Transport
 import dimensional.knats.protocol.Operation
 import dimensional.knats.protocol.OperationParser
 import dimensional.knats.protocol.impl.DefaultOperationParser
+import dimensional.knats.tools.escape
+import io.ktor.utils.io.core.*
 import naibu.logging.logging
 
-internal val log by logging("dimensional.knats.connection.wire")
+internal val log by logging("dimensional.knats.wire")
 
 internal suspend fun Transport.write(operation: Operation) {
     log.debug { "<<< $operation" }
-    write { operation.encode(this) }
+    write {
+        operation.encode(this)
+        log.trace {
+            val raw = preview { it.readText().escape() }
+            "[RAW] <<< $raw"
+        }
+    }
 }
 
-internal suspend fun Transport.readOperation(parser: OperationParser = DefaultOperationParser): Operation? {
+internal suspend fun Transport.readOperation(parser: OperationParser = DefaultOperationParser): Operation {
     incoming.awaitContent()
 
     val operation = parser.parse(incoming)
-    if (operation != null) log.debug { ">>> $operation" }
+    log.debug { ">>> $operation" }
 
     return operation
 }

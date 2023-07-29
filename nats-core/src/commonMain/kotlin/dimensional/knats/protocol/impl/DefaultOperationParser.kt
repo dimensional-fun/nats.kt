@@ -1,6 +1,6 @@
 package dimensional.knats.protocol.impl
 
-import dimensional.knats.connection.NatsException
+import dimensional.knats.internal.NatsException
 import dimensional.knats.protocol.*
 import dimensional.knats.tools.COLON
 import dimensional.knats.tools.Json
@@ -11,20 +11,26 @@ import dimensional.knats.tools.ktor.readUntilDelimiter
 import dimensional.knats.tools.ktor.tryPeek
 import io.ktor.utils.io.*
 import naibu.common.pool.use
-import naibu.ext.print
 import naibu.io.SmallMemoryPool
 import naibu.io.slice.get
+import naibu.logging.logging
 import naibu.serialization.DefaultFormats
 import naibu.serialization.deserialize
 import naibu.text.charset.decodeIntoString
-import kotlin.time.measureTimedValue
+import kotlin.collections.MutableMap
+import kotlin.collections.last
+import kotlin.collections.lastIndex
+import kotlin.collections.mutableMapOf
+import kotlin.collections.set
 
 public open class DefaultOperationParser : OperationParser {
-    public companion object : DefaultOperationParser();
+    public companion object : DefaultOperationParser() {
+        private val log by logging { }
 
-    private val opDecoders: MutableMap<String, suspend (ByteReadChannel) -> Operation?> = mutableMapOf()
+        public const val MAX_OP_NAME_LENGTH: Int = 7
+    };
 
-    protected val MAX_OP_NAME_LENGTH: Long get() = 7L
+    private val opDecoders: MutableMap<String, suspend (ByteReadChannel) -> Operation> = mutableMapOf()
 
     init {
         addDecoder("INFO") {
@@ -56,9 +62,9 @@ public open class DefaultOperationParser : OperationParser {
             it.ensureCRLF()
 
             // read payload.
-            val bytes = args.last().toInt()
-            if (bytes != 0) {
-                builder.payload = it.readPacket(bytes)
+            val payloadSize = args.last().toInt()
+            if (payloadSize != 0) {
+                builder.payload = it.readPacket(payloadSize)
             }
 
             builder.build()
@@ -94,24 +100,24 @@ public open class DefaultOperationParser : OperationParser {
             builder.version = version.copy().readText()
 
             /* read headers */
-            var read = version.remaining + 4
-            while (read < builder.hdrLen) {
-                val header = packet.ensureCRLF {
-                    packet.readUntilCRLF()
+            packet.ensureCRLF {
+                var read = version.remaining + 4
+                while (read < builder.hdrLen) {
+                    val header = packet.ensureCRLF {
+                        packet.readUntilCRLF()
+                    }
+
+                    read += header.remaining + 2
+
+                    val name = header.readUntilDelimiter(COLON)
+                    if (header.readByte() != COLON) {
+                        throw NatsException.ProtocolException("Expected ':' after header name")
+                    }
+
+                    header.discardValues(WHITESPACE)
+                    builder.headers.append(name.readText(), header.readText())
                 }
-
-                read += header.remaining + 2
-
-                val name = header.readUntilDelimiter(COLON)
-                if (header.readByte() != COLON) {
-                    throw NatsException.ProtocolException("Expected ':' after header name")
-                }
-
-                header.discardValues(WHITESPACE)
-                builder.headers.append(name.readText(), header.readText())
             }
-
-            packet.ensureCRLF()
 
             /* read payload len */
             val payloadLength = builder.totLen - builder.hdrLen
@@ -144,32 +150,31 @@ public open class DefaultOperationParser : OperationParser {
         }
     }
 
-    override suspend fun parse(ch: ByteReadChannel): Operation? = measureTimedValue {
-        /* parse the different ops */
-        val opName = parseOperationName(ch)
-            ?: return null
+    override suspend fun parse(channel: ByteReadChannel): Operation {
+        val opName = channel.readOpName()
+        log.debug { "Read op name: $opName" }
 
-        /* parse the operation. */
+        //
         val dec = opDecoders[opName]
             ?: throw NatsException.ProtocolException("Unknown operation: $opName")
 
-        ch.ensureCRLF {
+        return channel.ensureCRLF {
             // even though parse() is a suspending function & ensureCRLF is inline
             // it doesn't allow us to pass a suspending function.
             dec(it)
         }
-    }.also { it.duration.print() }.value
+    }
 
-    protected fun addDecoder(op: String, block: suspend (packet: ByteReadChannel) -> Operation?) {
+    protected fun addDecoder(op: String, block: suspend (packet: ByteReadChannel) -> Operation) {
         opDecoders[op] = block
     }
 
-    protected suspend fun parseOperationName(ch: ByteReadChannel): String? = SmallMemoryPool.use { opBuffer ->
+    private suspend fun ByteReadChannel.readOpName(): String = SmallMemoryPool.use { opBuffer ->
         /* peek the first byte estimate the number of bytes to read for the OP name */
-        val opLength = ch.tryPeek().estimateOpLength() ?: return null
+        val opLength = tryPeek().estimateOpLength()
+            ?: throw NatsException.ProtocolException("Unable to estimate operation name length")
 
-        //
-        ch.readFully(opBuffer, 0, opLength)
+        readFully(opBuffer, 0, opLength)
 
         /* only use `opLength` bytes from the buffer when decoding */
         opBuffer[0..<opLength].decodeIntoString().uppercase()

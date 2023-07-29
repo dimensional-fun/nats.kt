@@ -1,4 +1,4 @@
-package dimensional.knats.connection.transport
+package dimensional.knats.internal.transport
 
 import io.ktor.utils.io.*
 import io.ktor.utils.io.core.*

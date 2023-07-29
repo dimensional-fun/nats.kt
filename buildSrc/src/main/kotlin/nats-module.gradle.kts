@@ -26,9 +26,9 @@ kotlin {
 
         implementation("io.github.oshai:kotlin-logging:5.0.0")
 
-        implementation("naibu.stdlib:naibu-io:1.2-RC.1")
-        implementation("naibu.stdlib:naibu-core:1.2-RC.1")
-        implementation("naibu.stdlib:naibu-ktor-io:1.2-RC.1")
+        implementation("naibu.stdlib:naibu-io:1.2-RC.5")
+        implementation("naibu.stdlib:naibu-core:1.2-RC.5")
+        implementation("naibu.stdlib:naibu-ktor-io:1.2-RC.5")
 
         implementation("fun.dimensional:kyuso:1.1.0")
 
@@ -39,7 +39,6 @@ kotlin {
         implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.5.1")
     }
 }
-
 
 tasks {
     val jvmMainClasses by named("jvmMainClasses") {

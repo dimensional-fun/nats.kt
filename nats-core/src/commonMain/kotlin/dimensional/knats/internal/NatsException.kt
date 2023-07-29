@@ -1,4 +1,4 @@
-package dimensional.knats.connection
+package dimensional.knats.internal
 
 import dimensional.knats.protocol.Operation
 
