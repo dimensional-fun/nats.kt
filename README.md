@@ -27,7 +27,30 @@ dependencies {
 }
 ```
 
+## Example
 
+### Creating a Client
+
+```kt
+// create and connect a new NATS client.
+val client = Client("nats://127.0.0.1:4222") {
+    // use the TCP transport, you could also use the WebSocket transport.
+    transport = TcpTransport
+}
+```
+
+### Subscriptions
+
+```kt
+// create a subscription listening on all subjects.
+val all = client.subscribe(">")
+
+all.listen {
+    println("Received message $id on \"${delivery.subject}\"!")
+}
+```
+
+_more coming soon_
 
 ---
 
