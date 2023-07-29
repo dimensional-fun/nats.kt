@@ -1,1 +1,1 @@
-public suspend fun main(): Unit = bruh()
+public suspend fun main(): Unit = test()

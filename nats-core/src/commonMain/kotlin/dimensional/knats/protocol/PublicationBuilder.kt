@@ -1,6 +1,7 @@
 package dimensional.knats.protocol
 
 import io.ktor.http.*
+import io.ktor.utils.io.*
 import io.ktor.utils.io.core.*
 import naibu.text.charset.Charset
 import naibu.text.charset.Charsets
@@ -17,9 +18,17 @@ public class PublicationBuilder(public val subject: String) {
     public inline fun payload(
         size: Long,
         contentType: ContentType = ContentType.Application.OctetStream,
-        noinline block: (Output) -> Unit,
+        noinline block: suspend (ByteWriteChannel) -> Unit,
     ) {
         body = PublicationBody.Callback(size, block)
+        contentType(contentType)
+    }
+
+    /**
+     *
+     */
+    public inline fun payload(value: ByteReadChannel, size: Long, contentType: ContentType = ContentType.Application.OctetStream) {
+        body = PublicationBody.ReadChannel(value, size)
         contentType(contentType)
     }
 
@@ -42,7 +51,7 @@ public class PublicationBuilder(public val subject: String) {
     /**
      *
      */
-    public inline fun payload(value: String, range: IntRange = value.indices, charset: Charset = Charsets.US_ASCII) {
+    public inline fun payload(value: String, range: IntRange = value.indices, charset: Charset = Charsets.UTF_8) {
         body = PublicationBody.Packet(value.encodeIntoByteArray(range, charset))
         contentType(ContentType.Text.Plain.withParameter("charset", charset.name))
     }

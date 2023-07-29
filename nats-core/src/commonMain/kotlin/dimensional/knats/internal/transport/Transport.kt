@@ -19,8 +19,10 @@ public interface Transport {
      */
     public suspend fun upgradeTLS(): Transport
 
-    //
-    public suspend fun write(packet: ByteReadPacket)
-    public suspend fun write(block: BytePacketBuilder.() -> Unit): Unit = write(buildPacket(block))
+    /**
+     *
+     */
+    public suspend fun write(block: suspend (ByteWriteChannel) -> Unit)
+
     public suspend fun flush()
 }

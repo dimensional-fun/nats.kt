@@ -5,7 +5,6 @@ import io.ktor.client.*
 import io.ktor.client.engine.cio.*
 import io.ktor.client.plugins.websocket.*
 import io.ktor.utils.io.*
-import io.ktor.utils.io.core.*
 import io.ktor.websocket.*
 import kotlinx.coroutines.channels.consume
 import kotlinx.coroutines.isActive
@@ -51,7 +50,11 @@ public data class WebSocketTransport(val session: DefaultClientWebSocketSession)
 
     override suspend fun upgradeTLS(): Transport = this
 
-    override suspend fun write(packet: ByteReadPacket) {
+    override suspend fun write(block: suspend (ByteWriteChannel) -> Unit) {
+        val packet = ByteChannel()
+            .apply { block(this); flush() }
+            .readRemaining()
+
         session.send(Frame.Binary(true, packet))
     }
 

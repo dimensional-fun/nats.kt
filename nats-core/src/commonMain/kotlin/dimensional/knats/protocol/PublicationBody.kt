@@ -1,5 +1,6 @@
 package dimensional.knats.protocol
 
+import io.ktor.utils.io.*
 import io.ktor.utils.io.core.*
 import kotlin.jvm.JvmInline
 
@@ -12,10 +13,22 @@ public interface PublicationBody {
     /**
      *
      */
-    public fun write(output: Output)
+    public suspend fun write(channel: ByteWriteChannel)
 
-    public data class Callback(override val size: Long, private val block: (Output) -> Unit) : PublicationBody {
-        override fun write(output: Output): Unit = block(output)
+    /**
+     *
+     */
+    public data class Callback(override val size: Long, private val block: suspend (ByteWriteChannel) -> Unit) : PublicationBody {
+        override suspend fun write(channel: ByteWriteChannel): Unit = block(channel)
+    }
+
+    /**
+     *
+     */
+    public data class ReadChannel(val value: ByteReadChannel, override val size: Long) : PublicationBody {
+        override suspend fun write(channel: ByteWriteChannel) {
+            value.copyTo(channel, size)
+        }
     }
 
     /**
@@ -27,8 +40,8 @@ public interface PublicationBody {
 
         override val size: Long get() = packet.remaining
 
-        override fun write(output: Output) {
-            output.writePacket(packet)
+        override suspend fun write(channel: ByteWriteChannel) {
+            channel.writePacket(packet)
         }
     }
 
@@ -37,6 +50,6 @@ public interface PublicationBody {
      */
     public data object Empty : PublicationBody {
         override val size: Long get() = 0
-        override fun write(output: Output): Unit = Unit
+        override suspend fun write(channel: ByteWriteChannel): Unit = Unit
     }
 }

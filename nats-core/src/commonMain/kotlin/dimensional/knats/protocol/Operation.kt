@@ -1,7 +1,6 @@
 package dimensional.knats.protocol
 
 import dimensional.knats.tools.SPACE
-import dimensional.knats.tools.ktor.writeCRLF
 import io.ktor.http.*
 import io.ktor.util.*
 import io.ktor.utils.io.*
@@ -22,13 +21,13 @@ public sealed interface Operation {
     /**
      *
      */
-    public fun encode(out: Output) {
-        out.writeText(tag)
-        encodeOptions(out)
-        out.writeCRLF()
+    public suspend fun write(channel: ByteWriteChannel) {
+        channel.writeStringUtf8(tag)
+        writeInner(channel)
+        channel.writeCRLF()
     }
 
-    public fun encodeOptions(out: Output)
+    public suspend fun writeInner(channel: ByteWriteChannel)
 
     /**
      * A client will need to start as a plain TCP connection, then when the server accepts a connection from the client,
@@ -44,9 +43,9 @@ public sealed interface Operation {
     public value class Info(public val options: NatsInfoOptions) : Operation {
         override val tag: String get() = "INFO"
 
-        override fun encodeOptions(out: Output) {
+        override suspend fun writeInner(channel: ByteWriteChannel) {
             val json = DefaultFormats.Json.encodeToString(NatsInfoOptions.serializer(), options)
-            out.writeText(json)
+            channel.writeStringUtf8(json)
         }
     }
 
@@ -63,10 +62,10 @@ public sealed interface Operation {
     public value class Connect(public val options: NatsConnectOptions) : Operation {
         override val tag: String get() = "CONNECT"
 
-        override fun encodeOptions(out: Output) {
-            out.writeByte(SPACE)
+        override suspend fun writeInner(channel: ByteWriteChannel) {
+            channel.writeByte(SPACE)
             val json = DefaultFormats.Json.encodeToString(NatsConnectOptions.serializer(), options)
-            out.writeText(json)
+            channel.writeStringUtf8(json)
         }
     }
 
@@ -87,14 +86,14 @@ public sealed interface Operation {
     ) : Operation, Publication {
         override val tag: String get() = "PUB"
 
-        override fun encodeOptions(out: Output) {
-            out.writeArgument(subject, Output::writeSubject)
-            out.writeArgument(replyTo, Output::writeText)
+        override suspend fun writeInner(channel: ByteWriteChannel) {
+            channel.writeArgument(subject, ByteWriteChannel::writeSubject)
+            channel.writeArgument(replyTo, ByteWriteChannel::writeStringUtf8)
 
             //
-            out.writeArgument(body.size, Output::writeAsText)
-            out.writeCRLF()
-            body.write(out)
+            channel.writeArgument(body.size, ByteWriteChannel::writeAsText)
+            channel.writeCRLF()
+            body.write(channel)
         }
     }
 
@@ -106,9 +105,9 @@ public sealed interface Operation {
     ) : Operation, Publication {
         override val tag: String get() = "HPUB"
 
-        override fun encodeOptions(out: Output) {
-            out.writeArgument(subject, Output::writeSubject)
-            out.writeArgument(replyTo, Output::writeText)
+        override suspend fun writeInner(channel: ByteWriteChannel) {
+            channel.writeArgument(subject, ByteWriteChannel::writeSubject)
+            channel.writeArgument(replyTo, ByteWriteChannel::writeStringUtf8)
 
             val headers = buildPacket {
                 writeText("NATS/1.0")
@@ -122,13 +121,13 @@ public sealed interface Operation {
                 writeCRLF()
             }
 
-            out.writeArgument(headers.remaining, Output::writeAsText)
-            out.writeArgument(headers.remaining + body.size, Output::writeAsText)
+            channel.writeArgument(headers.remaining, ByteWriteChannel::writeAsText)
+            channel.writeArgument(headers.remaining + body.size, ByteWriteChannel::writeAsText)
 
             //
-            out.writeCRLF()
-            out.writePacket(headers)
-            body.write(out)
+            channel.writeCRLF()
+            channel.writePacket(headers)
+            body.write(channel)
         }
     }
 
@@ -141,10 +140,10 @@ public sealed interface Operation {
     public data class Sub(val subject: String, val queueGroup: String?, val sid: String) : Operation {
         override val tag: String get() = "SUB"
 
-        override fun encodeOptions(out: Output) {
-            out.writeArgument(subject, Output::writeSubject)
-            out.writeArgument(queueGroup, Output::writeText)
-            out.writeArgument(sid, Output::writeText)
+        override suspend fun writeInner(channel: ByteWriteChannel) {
+            channel.writeArgument(subject, ByteWriteChannel::writeSubject)
+            channel.writeArgument(queueGroup, ByteWriteChannel::writeStringUtf8)
+            channel.writeArgument(sid, ByteWriteChannel::writeStringUtf8)
         }
     }
 
@@ -157,9 +156,9 @@ public sealed interface Operation {
     public data class Unsub(val sid: String, val maxMessages: Int?) : Operation {
         override val tag: String get() = "UNSUB"
 
-        override fun encodeOptions(out: Output) {
-            out.writeArgument(sid, Output::writeSubject)
-            out.writeArgument(maxMessages, Output::writeAsText)
+        override suspend fun writeInner(channel: ByteWriteChannel) {
+            channel.writeArgument(sid, ByteWriteChannel::writeSubject)
+            channel.writeArgument(maxMessages, ByteWriteChannel::writeAsText)
         }
     }
 
@@ -170,7 +169,7 @@ public sealed interface Operation {
         override val subject: String,
         override val sid: String,
         override val replyTo: String?,
-        private val packet: ByteReadPacket?
+        private val packet: ByteReadPacket?,
     ) : Delivery, Operation {
         override val tag: String get() = "MSG"
 
@@ -178,15 +177,15 @@ public sealed interface Operation {
 
         override fun getPayload(): ByteReadPacket? = packet?.copy()
 
-        override fun encodeOptions(out: Output) {
-            out.writeArgument(subject, Output::writeSubject)
-            out.writeArgument(sid, Output::writeText)
-            out.writeArgument(replyTo, Output::writeText)
-            out.writeArgument(packet?.remaining ?: 0, Output::writeAsText)
+        override suspend fun writeInner(channel: ByteWriteChannel) {
+            channel.writeArgument(subject, ByteWriteChannel::writeSubject)
+            channel.writeArgument(sid, ByteWriteChannel::writeStringUtf8)
+            channel.writeArgument(replyTo, ByteWriteChannel::writeStringUtf8)
+            channel.writeArgument(packet?.remaining ?: 0, ByteWriteChannel::writeAsText)
 
             //
-            out.writeCRLF()
-            packet?.copy()?.let(out::writePacket)
+            channel.writeCRLF()
+            packet?.copy()?.let { channel.writePacket(it) }
         }
 
         public class Builder {
@@ -208,16 +207,16 @@ public sealed interface Operation {
         override val replyTo: String?,
         override val headers: Headers,
         val version: String,
-        private val packet: ByteReadPacket?
+        private val packet: ByteReadPacket?,
     ) : Delivery, Operation {
         override val tag: String get() = "HMSG"
 
         override fun getPayload(): ByteReadPacket? = packet?.copy()
 
-        override fun encodeOptions(out: Output) {
-            out.writeArgument(subject, Output::writeSubject)
-            out.writeArgument(sid, Output::writeText)
-            out.writeArgument(replyTo, Output::writeText)
+        override suspend fun writeInner(channel: ByteWriteChannel) {
+            channel.writeArgument(subject, ByteWriteChannel::writeSubject)
+            channel.writeArgument(sid, ByteWriteChannel::writeStringUtf8)
+            channel.writeArgument(replyTo, ByteWriteChannel::writeStringUtf8)
 
             /* create headers packet */
             val headers = buildPacket {
@@ -227,7 +226,7 @@ public sealed interface Operation {
                 }
             }
 
-            out.writeArgument(headers.remaining, Output::writeAsText)
+            channel.writeArgument(headers.remaining, ByteWriteChannel::writeAsText)
 
             /* create payload packet. */
             val payload = buildPacket {
@@ -236,11 +235,11 @@ public sealed interface Operation {
                 packet?.copy()?.let(::writePacket)
             }
 
-            out.writeArgument(payload.remaining, Output::writeAsText)
+            channel.writeArgument(payload.remaining, ByteWriteChannel::writeAsText)
 
             /* write payload packet. */
-            out.writeCRLF()
-            out.writePacket(payload)
+            channel.writeCRLF()
+            channel.writePacket(payload)
         }
 
 
@@ -265,7 +264,7 @@ public sealed interface Operation {
      */
     public data object Ping : Operation {
         override val tag: String get() = "PING"
-        override fun encodeOptions(out: Output): Unit = Unit
+        override suspend fun writeInner(channel: ByteWriteChannel): Unit = Unit
     }
 
     /**
@@ -273,7 +272,7 @@ public sealed interface Operation {
      */
     public data object Pong : Operation {
         override val tag: String get() = "PONG"
-        override fun encodeOptions(out: Output): Unit = Unit
+        override suspend fun writeInner(channel: ByteWriteChannel): Unit = Unit
     }
 
     /**
@@ -284,7 +283,7 @@ public sealed interface Operation {
      */
     public data object Ok : Operation {
         override val tag: String get() = "+OK"
-        override fun encodeOptions(out: Output): Unit = Unit
+        override suspend fun writeInner(channel: ByteWriteChannel): Unit = Unit
     }
 
     /**
@@ -297,8 +296,8 @@ public sealed interface Operation {
     public data class Err(val message: String) : Operation {
         override val tag: String get() = "-ERR"
 
-        override fun encodeOptions(out: Output) {
-            out.writeArgument(message, Output::writeText)
+        override suspend fun writeInner(channel: ByteWriteChannel) {
+            channel.writeArgument(message, ByteWriteChannel::writeStringUtf8)
         }
     }
 }

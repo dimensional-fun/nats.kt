@@ -11,13 +11,7 @@ internal val log by logging("dimensional.knats.wire")
 
 internal suspend fun Transport.write(operation: Operation) {
     log.debug { "<<< $operation" }
-    write {
-        operation.encode(this)
-        log.trace {
-            val raw = preview { it.readText().escape() }
-            "[RAW] <<< $raw"
-        }
-    }
+    write(operation::write)
 }
 
 internal suspend fun Transport.readOperation(parser: OperationParser = DefaultOperationParser): Operation {
@@ -32,5 +26,5 @@ internal suspend fun Transport.readOperation(parser: OperationParser = DefaultOp
 internal suspend inline fun <reified T : Operation> Transport.expect(parser: OperationParser = DefaultOperationParser): T =
     when (val op = readOperation(parser)) {
         is T -> op
-        else -> error("Expected ${T::class.simpleName}, received ${op?.tag} instead.")
+        else -> error("Expected ${T::class.simpleName}, received ${op.tag} instead.")
     }

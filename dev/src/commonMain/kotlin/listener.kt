@@ -16,14 +16,12 @@ public suspend fun listener(client: Client): Unit = coroutineScope {
 
 public fun Headers.appendTo(dst: Appendable) {
     if (isEmpty()) return
-    flattenForEach { name, value ->
-        dst.appendLine("$name: $value")
-    }
+    flattenForEach { name, value -> dst.appendLine("$name: $value") }
+    dst.appendLine()
 }
 
 public fun Message.format(): String = buildString {
     appendLine("[$id] Received on \"${delivery.subject}\"")
     delivery.headers?.appendTo(this)
-    appendLine()
     appendLine(delivery.getPayload()?.readText() ?: "--NO CONTENT--")
 }

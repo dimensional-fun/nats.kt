@@ -4,7 +4,6 @@ import dimensional.knats.protocol.NatsServerAddress
 import io.ktor.network.selector.*
 import io.ktor.network.sockets.*
 import io.ktor.utils.io.*
-import io.ktor.utils.io.core.*
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlin.coroutines.CoroutineContext
@@ -29,11 +28,11 @@ public class TcpTransport(internal val inner: Connection) : Transport {
 
     override suspend fun upgradeTLS(): TcpTransport = upgradeTlsNative(inner)
 
-    override suspend fun write(packet: ByteReadPacket): Unit = writeMutex.withLock {
-        inner.output.writePacket(packet)
+    override suspend fun write(block: suspend (ByteWriteChannel) -> Unit): Unit = writeMutex.withLock {
+        block(inner.output)
     }
 
-    override suspend fun flush() {
+    override suspend fun flush(): Unit = writeMutex.withLock {
         inner.output.flush()
     }
 }

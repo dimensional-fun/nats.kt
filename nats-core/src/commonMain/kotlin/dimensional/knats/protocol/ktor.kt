@@ -4,7 +4,6 @@ import dimensional.knats.tools.CRLF
 import dimensional.knats.tools.SPACE
 import dimensional.knats.tools.ktor.readFully
 import dimensional.knats.tools.ktor.readUntilDelimitersTo
-import dimensional.knats.tools.ktor.writeTextNaibu
 import io.ktor.utils.io.*
 import io.ktor.utils.io.core.*
 import naibu.common.pool.use
@@ -12,6 +11,7 @@ import naibu.io.SmallMemoryPool
 import naibu.io.slice.Slice
 import naibu.io.slice.contentEquals
 import naibu.io.slice.get
+import naibu.text.charset.Charset
 import naibu.text.charset.Charsets
 import naibu.text.charset.decodeIntoString
 import kotlin.contracts.ExperimentalContracts
@@ -52,12 +52,21 @@ public suspend fun ByteReadChannel.readUntilCRLF(): ByteReadPacket = buildPacket
 
 internal inline infix fun Slice.eq(other: ByteArray) = contentEquals(other)
 
-internal fun Output.writeAsText(value: Any) = writeText(value.toString())
+internal suspend fun ByteWriteChannel.writeAsText(value: Any) = writeStringUtf8(value.toString())
 
-internal fun Output.writeSubject(value: String) = writeTextNaibu(value, charset = Charsets.US_ASCII)
+internal suspend fun ByteWriteChannel.writeSubject(value: String) = writeTextNaibu(value, charset = Charsets.US_ASCII)
 
-internal fun <T> Output.writeArgument(value: T?, block: Output.(T) -> Unit) {
+internal suspend fun <T> ByteWriteChannel.writeArgument(value: T?, block: suspend ByteWriteChannel.(T) -> Unit) {
     if (value == null) return
     writeByte(SPACE)
     block(value)
+}
+
+internal fun Output.writeCRLF() = writeFully(CRLF)
+
+internal suspend fun ByteWriteChannel.writeCRLF() = writeFully(CRLF)
+
+internal suspend fun ByteWriteChannel.writeTextNaibu(value: CharSequence, charset: Charset) {
+    val bytes = charset.encode(value.toString(), value.indices)
+    writeFully(bytes)
 }
