@@ -25,7 +25,7 @@ public data class NatsClient(val resources: NatsResources) : Client {
     override val connection: Connection get() = conn
     override val subscriptions: Map<String, Subscription> get() = mutableSubscriptions
 
-    public suspend fun connect() {
+    override suspend fun connect() {
         /* connect to the remote NATS server. */
         conn.connect()
 

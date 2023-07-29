@@ -11,6 +11,23 @@ import kotlinx.coroutines.flow.buffer
 import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.launch
+import kotlin.contracts.ExperimentalContracts
+import kotlin.contracts.InvocationKind
+import kotlin.contracts.contract
+
+@OptIn(ExperimentalContracts::class)
+public suspend inline fun Client(uri: String, block: ClientBuilder.() -> Unit): Client {
+    contract {
+        callsInPlace(block, InvocationKind.EXACTLY_ONCE)
+    }
+
+    val client = ClientBuilder(uri)
+        .apply(block)
+        .build()
+
+    client.connect()
+    return client
+}
 
 /**
  * Whether this connection is currently connected.

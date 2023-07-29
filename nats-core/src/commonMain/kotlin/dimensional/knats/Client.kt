@@ -18,6 +18,11 @@ public interface Client {
     /**
      *
      */
+    public suspend fun connect()
+
+    /**
+     *
+     */
     public suspend fun subscribe(subject: String, queueGroup: String? = null): Subscription
 
     /**
