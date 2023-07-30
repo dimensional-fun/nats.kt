@@ -20,7 +20,7 @@ public open class DefaultOperationParser : OperationParser {
     public companion object : DefaultOperationParser() {
         private val log by logging { }
 
-        public const val MAX_OP_NAME_LENGTH: Int = 7
+        public const val MAX_OP_NAME_LENGTH: Int = 4
     };
 
     private val opDecoders: MutableMap<String, suspend (ByteReadChannel) -> Operation> = mutableMapOf()
