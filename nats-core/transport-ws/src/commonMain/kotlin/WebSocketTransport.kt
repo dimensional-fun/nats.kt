@@ -1,6 +1,6 @@
-import dimensional.knats.internal.transport.Transport
-import dimensional.knats.internal.transport.TransportFactory
-import dimensional.knats.protocol.NatsServerAddress
+package dimensional.knats.transport
+
+import dimensional.knats.NatsServerAddress
 import io.ktor.client.*
 import io.ktor.client.engine.cio.*
 import io.ktor.client.plugins.websocket.*

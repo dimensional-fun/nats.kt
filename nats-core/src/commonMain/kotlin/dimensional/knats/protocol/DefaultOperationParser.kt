@@ -11,6 +11,7 @@ import dimensional.knats.tools.ktor.tryPeek
 import io.ktor.utils.io.*
 import naibu.common.pool.use
 import naibu.io.SmallMemoryPool
+import naibu.io.slice.get
 import naibu.logging.logging
 import naibu.serialization.DefaultFormats
 import naibu.serialization.deserialize

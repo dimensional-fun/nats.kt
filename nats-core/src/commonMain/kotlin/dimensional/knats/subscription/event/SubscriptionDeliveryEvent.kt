@@ -1,8 +1,8 @@
 package dimensional.knats.subscription.event
 
+import dimensional.knats.client.publish
 import dimensional.knats.protocol.Delivery
 import dimensional.knats.protocol.PublicationBuilder
-import dimensional.knats.publish
 import dimensional.knats.subscription.Subscription
 
 /**
