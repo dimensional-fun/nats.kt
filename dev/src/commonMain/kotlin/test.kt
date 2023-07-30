@@ -8,7 +8,7 @@ import naibu.platform.Environment
 public val NATS_SERVER_ADDR: String = Environment["NATS_SERVER_ADDR"].unwrapOr("127.0.0.1:4222")
 
 public suspend fun test(): Unit = coroutineScope {
-    val client = Client("nats://127.0.0.1:4222") {
+    val client = Client("nats://$NATS_SERVER_ADDR") {
         transport = TcpTransport
     }
 
