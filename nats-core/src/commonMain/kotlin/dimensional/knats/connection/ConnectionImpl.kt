@@ -1,13 +1,12 @@
-package dimensional.knats.internal.connection
+package dimensional.knats.connection
 
-import dimensional.knats.Connection
 import dimensional.knats.annotations.InternalNatsApi
-import dimensional.knats.internal.NatsResources
-import dimensional.knats.internal.transport.Transport
-import dimensional.knats.internal.transport.readOperation
-import dimensional.knats.internal.transport.write
+import dimensional.knats.client.ClientResources
 import dimensional.knats.protocol.Operation
 import dimensional.knats.tools.child
+import dimensional.knats.transport.Transport
+import dimensional.knats.transport.readOperation
+import dimensional.knats.transport.write
 import dimensional.kyuso.Kyuso
 import kotlinx.coroutines.CoroutineName
 import kotlinx.coroutines.CoroutineScope
@@ -20,27 +19,27 @@ import naibu.monads.unwrapOkOrElse
 import kotlin.coroutines.coroutineContext
 
 @OptIn(InternalNatsApi::class)
-public class NatsConnection(public val resources: NatsResources) : Connection {
-    public companion object {
+internal class ConnectionImpl(private val resources: ClientResources) : Connection {
+    companion object {
         private val log by logging { }
     }
 
     /** Used for connecting to different NATS servers. */
-    private val connector = NatsConnector(resources)
+    private val connector = Connector(resources)
 
     override val scope: CoroutineScope = connector.scope.child(CoroutineName("Connection"))
 
-    internal val kyuso = Kyuso(scope)
+    private val kyuso = Kyuso(scope)
 
     //
-    private val mutableState = MutableStateFlow<NatsConnectionState>(NatsConnectionState.Disconnected)
+    private val mutableState = MutableStateFlow<ConnectionState>(ConnectionState.Disconnected)
     private val mutableOperations = MutableSharedFlow<Operation>(extraBufferCapacity = Int.MAX_VALUE)
 
-    override val state: StateFlow<NatsConnectionState> = mutableState.asStateFlow()
+    override val state: StateFlow<ConnectionState> = mutableState.asStateFlow()
     override val operations: SharedFlow<Operation> = mutableOperations
 
     override suspend fun send(operation: Operation) {
-        val (ts) = requireNotNull(state.value.intoOrNull<NatsConnectionState.Connected>()) {
+        val (ts) = requireNotNull(state.value.intoOrNull<ConnectionState.Connected>()) {
             "This connection is not running."
         }
 
@@ -62,11 +61,11 @@ public class NatsConnection(public val resources: NatsResources) : Connection {
         }
 
         /* upgrade the connection. */
-        mutableState.update { NatsConnectionState.Connected(ts, reader) }
+        mutableState.update { ConnectionState.Connected(ts, reader) }
     }
 
     override suspend fun disconnect() {
-        val (ts, reader) = requireNotNull(state.value.intoOrNull<NatsConnectionState.Connected>()) {
+        val (ts, reader) = requireNotNull(state.value.intoOrNull<ConnectionState.Connected>()) {
             "This NATS connection is not connected or has been detached."
         }
 
@@ -75,7 +74,7 @@ public class NatsConnection(public val resources: NatsResources) : Connection {
         ts.close()
 
         /*  */
-        mutableState.update { NatsConnectionState.Disconnected }
+        mutableState.update { ConnectionState.Disconnected }
     }
 
     override suspend fun detach() {
@@ -83,7 +82,7 @@ public class NatsConnection(public val resources: NatsResources) : Connection {
             disconnect()
         } finally {
             scope.cancel()
-            mutableState.update { NatsConnectionState.Disconnected }
+            mutableState.update { ConnectionState.Disconnected }
         }
     }
 

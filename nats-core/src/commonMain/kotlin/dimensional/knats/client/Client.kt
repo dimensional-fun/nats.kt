@@ -1,7 +1,9 @@
-package dimensional.knats
+package dimensional.knats.client
 
+import dimensional.knats.connection.Connection
 import dimensional.knats.annotations.InternalNatsApi
 import dimensional.knats.protocol.Publication
+import dimensional.knats.subscription.Subscription
 
 /**
  * A NATS client.

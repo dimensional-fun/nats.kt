@@ -1,7 +1,6 @@
-package dimensional.knats.protocol.impl
+package dimensional.knats.protocol
 
-import dimensional.knats.internal.NatsException
-import dimensional.knats.protocol.*
+import dimensional.knats.NatsException
 import dimensional.knats.tools.COLON
 import dimensional.knats.tools.Json
 import dimensional.knats.tools.WHITESPACE
@@ -12,16 +11,10 @@ import dimensional.knats.tools.ktor.tryPeek
 import io.ktor.utils.io.*
 import naibu.common.pool.use
 import naibu.io.SmallMemoryPool
-import naibu.io.slice.get
 import naibu.logging.logging
 import naibu.serialization.DefaultFormats
 import naibu.serialization.deserialize
 import naibu.text.charset.decodeIntoString
-import kotlin.collections.MutableMap
-import kotlin.collections.last
-import kotlin.collections.lastIndex
-import kotlin.collections.mutableMapOf
-import kotlin.collections.set
 
 public open class DefaultOperationParser : OperationParser {
     public companion object : DefaultOperationParser() {

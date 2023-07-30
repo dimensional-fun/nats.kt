@@ -1,25 +1,24 @@
-package dimensional.knats.internal
+package dimensional.knats.client
 
-import dimensional.knats.Client
-import dimensional.knats.Connection
-import dimensional.knats.Subscription
+import dimensional.knats.connection.Connection
 import dimensional.knats.annotations.InternalNatsApi
-import dimensional.knats.internal.connection.NatsConnection
+import dimensional.knats.connection.ConnectionImpl
 import dimensional.knats.protocol.Delivery
 import dimensional.knats.protocol.Operation
 import dimensional.knats.protocol.Publication
+import dimensional.knats.subscription.Subscription
+import dimensional.knats.subscription.SubscriptionImpl
+import dimensional.knats.tools.NUID
 import kotlinx.coroutines.flow.filterIsInstance
 import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.launch
-import naibu.common.generateUniqueId
 import naibu.concurrency.ConcurrentHashMap
 import naibu.ext.into
-import kotlin.collections.set
 
-public data class NatsClient(val resources: NatsResources) : Client {
-    internal val mutableSubscriptions = ConcurrentHashMap<String, NatsSubscription>()
-    internal val conn = NatsConnection(resources)
+internal data class ClientImpl(val resources: ClientResources) : Client {
+    internal val mutableSubscriptions = ConcurrentHashMap<String, SubscriptionImpl>()
+    internal val conn = ConnectionImpl(resources)
 
     @InternalNatsApi
     override val connection: Connection get() = conn
@@ -39,13 +38,13 @@ public data class NatsClient(val resources: NatsResources) : Client {
     }
 
     override suspend fun subscribe(subject: String, queueGroup: String?): Subscription =
-        NatsSubscription(this, generateUniqueId(), subject, queueGroup).also {
+        SubscriptionImpl(this, NUID.next(), subject, queueGroup).also {
             conn.send(Operation.Sub(subject, queueGroup, it.id))
             mutableSubscriptions[it.id] = it
         }
 
     override suspend fun subscribe(id: String, subject: String, queueGroup: String?): Subscription =
-        NatsSubscription(this, id, subject, queueGroup).also {
+        SubscriptionImpl(this, id, subject, queueGroup).also {
             conn.send(Operation.Sub(subject, queueGroup, id))
             mutableSubscriptions[id] = it
         }

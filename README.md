@@ -45,7 +45,11 @@ val client = Client("nats://127.0.0.1:4222") {
 // create a subscription listening on all subjects.
 val all = client.subscribe(">")
 
-all.listen {
+all.on<SubscriptionUnsubscribedEvent> {
+    println("Subscription was ${if (auto) "auto-" else ""}unsubscribed.")
+}
+
+all.on<SubscriptionDeliveryEvent> {
     println("Received message $id on \"${delivery.subject}\"!")
 }
 ```

@@ -1,10 +1,8 @@
-package dimensional.knats.internal.transport
+package dimensional.knats.transport
 
 import dimensional.knats.protocol.Operation
 import dimensional.knats.protocol.OperationParser
-import dimensional.knats.protocol.impl.DefaultOperationParser
-import dimensional.knats.tools.escape
-import io.ktor.utils.io.core.*
+import dimensional.knats.protocol.DefaultOperationParser
 import naibu.logging.logging
 
 internal val log by logging("dimensional.knats.wire")

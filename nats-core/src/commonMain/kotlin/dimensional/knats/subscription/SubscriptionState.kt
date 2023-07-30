@@ -1,4 +1,4 @@
-package dimensional.knats
+package dimensional.knats.subscription
 
 import kotlin.jvm.JvmInline
 

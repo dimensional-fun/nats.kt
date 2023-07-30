@@ -1,19 +1,19 @@
-package dimensional.knats.internal.connection
+package dimensional.knats.connection
 
-import dimensional.knats.internal.NatsResources
-import dimensional.knats.internal.transport.Transport
-import dimensional.knats.internal.transport.expect
-import dimensional.knats.internal.transport.readOperation
-import dimensional.knats.internal.transport.write
+import dimensional.knats.client.ClientResources
+import dimensional.knats.transport.Transport
+import dimensional.knats.transport.expect
+import dimensional.knats.transport.readOperation
+import dimensional.knats.transport.write
 import dimensional.knats.protocol.NatsConnectOptions
-import dimensional.knats.protocol.NatsServerAddress
+import dimensional.knats.NatsServerAddress
 import dimensional.knats.protocol.Operation
 import kotlinx.coroutines.*
 import naibu.ext.into
 import naibu.monads.*
 import kotlin.coroutines.coroutineContext
 
-public data class NatsConnector(val resources: NatsResources) {
+public data class Connector(val resources: ClientResources) {
     private val attempts = resources.servers.associateWith { 0 }.toMutableMap()
 
     /**

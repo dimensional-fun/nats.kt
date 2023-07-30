@@ -1,5 +1,7 @@
-package dimensional.knats
+package dimensional.knats.subscription
 
+import dimensional.knats.client.Client
+import dimensional.knats.subscription.event.SubscriptionEvent
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -17,7 +19,7 @@ public interface Subscription {
 
     public val state: StateFlow<SubscriptionState>
 
-    public val messages: SharedFlow<Message>
+    public val events: SharedFlow<SubscriptionEvent>
 
     public val received: Long
 
@@ -28,7 +30,7 @@ public interface Subscription {
      *
      * @param after The number of messages to receive for cancelling.
      */
-    public suspend fun cancel(after: Int? = null)
+    public suspend fun unsubscribe(after: Int? = null)
 
     /**
      *

@@ -1,4 +1,4 @@
-package dimensional.knats.internal
+package dimensional.knats
 
 import dimensional.knats.protocol.Operation
 

@@ -1,7 +1,6 @@
-package dimensional.knats
+package dimensional.knats.connection
 
 import dimensional.knats.annotations.InternalNatsApi
-import dimensional.knats.internal.connection.NatsConnectionState
 import dimensional.knats.protocol.Operation
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.SharedFlow
@@ -14,7 +13,7 @@ public interface Connection {
     /**
      * The current state of the connection.
      */
-    public val state: StateFlow<NatsConnectionState>
+    public val state: StateFlow<ConnectionState>
 
     /**
      * The operations received by this connection.
@@ -38,7 +37,7 @@ public interface Connection {
 
     /**
      * Send an operation to the remote NATS server, this method will throw an exception
-     * if the [current state][state] is not [NatsConnectionState.Connected].
+     * if the [current state][state] is not [ConnectionState.Connected].
      *
      * @param operation The operation to send.
      */
