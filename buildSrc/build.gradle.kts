@@ -16,4 +16,8 @@ dependencies {
 
     implementation(gradleApi())
     implementation(localGroovy())
+
+    /* code generation */
+    implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.5.1")
+    implementation("com.squareup:kotlinpoet:1.14.2")
 }
