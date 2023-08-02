@@ -1,14 +1,14 @@
 package dimensional.knats.client
 
-import dimensional.knats.transport.TransportFactory
-import dimensional.knats.NatsServerAddress
-import dimensional.knats.protocol.OperationParser
 import dimensional.knats.protocol.DefaultOperationParser
+import dimensional.knats.protocol.OperationParser
 import dimensional.knats.tools.NUID
+import dimensional.knats.tools.toServerAddr
+import dimensional.knats.transport.TransportFactory
 import io.ktor.http.*
 import naibu.ext.withSuffix
 
-public class ClientBuilder(public val uri: String) {
+public class ClientResourcesBuilder(public val uri: String) {
     public companion object {
         public const val DEFAULT_INBOX_PREFIX: String = "_INBOX."
     }
@@ -41,26 +41,18 @@ public class ClientBuilder(public val uri: String) {
      */
     public var nuid: NUID = NUID()
 
-
-    public fun build(): Client {
+    public fun build(): ClientResources {
         require(::transport.isInitialized) {
             "A transport must be specified in order to connect."
         }
 
-        val url = Url(uri)
-        require(url.protocol.name.equals("nats", true)) {
-            "The given URI has an unknown scheme, must be 'nats'."
-        }
-
-        val resources = ClientResources(
-            listOf(NatsServerAddress(url.host, url.specifiedPort.takeUnless { it == 0 } ?: 4222)),
+        return ClientResources(
+            listOf(Url(uri).toServerAddr()),
             transport,
             inboxPrefix,
             parser,
             maxReconnects,
             nuid
         )
-
-        return ClientImpl(resources)
     }
 }

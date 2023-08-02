@@ -2,47 +2,46 @@ package dimensional.knats.transport
 
 import dimensional.knats.NatsServerAddress
 import io.ktor.client.*
-import io.ktor.client.engine.cio.*
+import io.ktor.client.engine.*
 import io.ktor.client.plugins.websocket.*
 import io.ktor.utils.io.*
 import io.ktor.websocket.*
-import kotlinx.coroutines.channels.consume
 import kotlinx.coroutines.isActive
-import kotlinx.coroutines.launch
 import kotlin.coroutines.CoroutineContext
 import kotlin.jvm.JvmInline
 
 public data class WebSocketTransport(val session: DefaultClientWebSocketSession) : Transport {
     @JvmInline
     public value class Factory(public val httpClient: HttpClient) : TransportFactory {
+        public constructor(engine: HttpClientEngineFactory<*>) : this(HttpClient(engine) {
+            install(WebSockets)
+        })
+
         override suspend fun connect(address: NatsServerAddress, context: CoroutineContext): Transport =
             WebSocketTransport(httpClient.webSocketSession("ws://${address.host}:${address.port}"))
     }
 
-    /**
-     *
-     */
-    public companion object : TransportFactory by Factory(HttpClient(CIO) {
-        install(WebSockets)
-    })
+    private val outgoing = session.reader() {
+        while (isActive) {
+            channel.awaitContent()
 
-    override val incoming: ByteReadChannel = session.incoming.consume {
-        val channel = ByteChannel(true)
-        session.launch {
-            while (isActive) {
-                val frame = try {
-                    receive()
-                } catch (ex: CancellationException) {
-                    channel.cancel(ex)
-                    break
-                }
-
-                channel.writeFully(frame.data)
-            }
+            val packet = channel.readRemaining(channel.availableForRead.toLong())
+            session.send(Frame.Binary(true, packet))
         }
+    }.channel
 
-        channel
-    }
+    override val incoming: ByteReadChannel = session.writer(autoFlush = true) {
+        while (!channel.isClosedForWrite) {
+            val frame = try {
+                session.incoming.receive()
+            } catch (ex: CancellationException) {
+                channel.close(ex)
+                break
+            }
+
+            channel.writeFully(frame.data)
+        }
+    }.channel
 
     override suspend fun close() {
         session.close()
@@ -51,11 +50,8 @@ public data class WebSocketTransport(val session: DefaultClientWebSocketSession)
     override suspend fun upgradeTLS(): Transport = this
 
     override suspend fun write(block: suspend (ByteWriteChannel) -> Unit) {
-        val packet = ByteChannel()
-            .apply { block(this); flush() }
-            .readRemaining()
-
-        session.send(Frame.Binary(true, packet))
+        block(outgoing)
+        outgoing.flush()
     }
 
     override suspend fun flush() {

@@ -21,7 +21,6 @@ import kotlin.contracts.contract
 internal fun Byte.estimateOpLength(): Int? = when (toInt().toChar().uppercaseChar()) {
     'M', '+' -> 3
     'I', 'H', 'P', '-' -> 4
-    'C' -> 7
     else -> null
 }
 

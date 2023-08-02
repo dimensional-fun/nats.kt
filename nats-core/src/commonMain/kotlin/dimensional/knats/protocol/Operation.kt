@@ -12,7 +12,6 @@ import kotlin.jvm.JvmInline
 import kotlin.properties.Delegates
 
 /**
- * Operations sent to the server from the client (S2C)
  */
 @Serializable
 public sealed interface Operation {
@@ -206,7 +205,7 @@ public sealed interface Operation {
         override val sid: String,
         override val replyTo: String?,
         override val headers: Headers,
-        val version: String,
+        val header: String,
         private val packet: ByteReadPacket?,
     ) : Delivery, Operation {
         override val tag: String get() = "HMSG"

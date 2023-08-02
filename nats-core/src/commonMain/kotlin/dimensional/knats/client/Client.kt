@@ -1,7 +1,8 @@
 package dimensional.knats.client
 
-import dimensional.knats.connection.Connection
 import dimensional.knats.annotations.InternalNatsApi
+import dimensional.knats.connection.Connection
+import dimensional.knats.protocol.Delivery
 import dimensional.knats.protocol.Publication
 import dimensional.knats.subscription.Subscription
 
@@ -11,6 +12,11 @@ import dimensional.knats.subscription.Subscription
 public interface Client {
     @InternalNatsApi
     public val connection: Connection
+
+    /**
+     *
+     */
+    public val resources: ClientResources
 
     /**
      * The subscriptions that have been created w/ this [Client].
@@ -36,4 +42,9 @@ public interface Client {
      *
      */
     public suspend fun publish(publication: Publication)
+
+    /**
+     *
+     */
+    public suspend fun request(publication: Publication): Delivery
 }

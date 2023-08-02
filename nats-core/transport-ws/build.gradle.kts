@@ -1,8 +1,9 @@
-kotlin.sourceSets["commonMain"].dependencies {
-    implementation(projects.natsCore)
+kotlin {
+    mingwX64()
 
-    //
-    implementation(libs.ktor.client.core)
-    implementation(libs.ktor.client.websockets)
-    implementation("io.ktor:ktor-client-cio:2.3.2")
+    sourceSets["commonMain"].dependencies {
+        api(projects.natsCore)
+        api(libs.ktor.client.core)
+        api(libs.ktor.client.websockets)
+    }
 }

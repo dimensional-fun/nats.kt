@@ -2,6 +2,7 @@ package dimensional.knats.tools.ktor
 
 import io.ktor.utils.io.bits.*
 import io.ktor.utils.io.core.*
+import naibu.text.charset.Charset
 
 internal fun Input.readUntilDelimiter(delimiter: Byte) = buildPacket {
     readUntilDelimiter(delimiter, this)

@@ -9,20 +9,18 @@ import dimensional.knats.tools.ktor.readFully
 import dimensional.knats.tools.ktor.readUntilDelimiter
 import dimensional.knats.tools.ktor.tryPeek
 import io.ktor.utils.io.*
+import io.ktor.utils.io.core.*
 import naibu.common.pool.use
 import naibu.io.SmallMemoryPool
 import naibu.io.slice.get
-import naibu.logging.logging
 import naibu.serialization.DefaultFormats
 import naibu.serialization.deserialize
 import naibu.text.charset.decodeIntoString
 
 public open class DefaultOperationParser : OperationParser {
     public companion object : DefaultOperationParser() {
-        private val log by logging { }
-
         public const val MAX_OP_NAME_LENGTH: Int = 4
-    };
+    }
 
     private val opDecoders: MutableMap<String, suspend (ByteReadChannel) -> Operation> = mutableMapOf()
 
@@ -71,7 +69,8 @@ public open class DefaultOperationParser : OperationParser {
                 /* read initial headers */
                 val args = packet
                     .readUntilCRLF()
-                    .readText()
+                    .readBytes()
+                    .decodeIntoString()
                     .split('\t', ' ')
 
                 val builder = Operation.MsgWithHeaders.Builder()
@@ -109,7 +108,10 @@ public open class DefaultOperationParser : OperationParser {
                     }
 
                     header.discardValues(WHITESPACE)
-                    builder.headers.append(name.readText(), header.readText())
+                    builder.headers.append(
+                        name.readBytes().decodeIntoString(),
+                        header.readBytes().decodeIntoString()
+                    )
                 }
             }
 
@@ -146,7 +148,6 @@ public open class DefaultOperationParser : OperationParser {
 
     override suspend fun parse(channel: ByteReadChannel): Operation {
         val opName = channel.readOpName()
-        log.debug { "Read op name: $opName" }
 
         //
         val dec = opDecoders[opName]

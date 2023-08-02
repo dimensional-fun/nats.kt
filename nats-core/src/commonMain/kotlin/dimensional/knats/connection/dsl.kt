@@ -1,6 +1,8 @@
 package dimensional.knats.connection
 
+import dimensional.knats.NatsServer
 import dimensional.knats.annotations.InternalNatsApi
+import naibu.ext.intoOrNull
 
 /**
  * Whether this connection is currently connected.
@@ -13,3 +15,9 @@ public val Connection.isConnected: Boolean get() = state.value is ConnectionStat
  */
 @OptIn(InternalNatsApi::class)
 public val Connection.isDetached: Boolean get() = state.value == ConnectionState.Detached
+
+/**
+ * The [NATS server][NatsServer] that we're currently connected to.
+ */
+@OptIn(InternalNatsApi::class)
+public val Connection.connectedServer: NatsServer? get() = state.value.intoOrNull<ConnectionState.Connected>()?.server

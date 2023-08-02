@@ -12,8 +12,9 @@ internal const val COLON = ':'.code.toByte()
 internal val WHITESPACE = byteArrayOf(SPACE, TAB)
 internal val CRLF = byteArrayOf(CR, LF)
 
-internal val DefaultFormats.Json get() = Json {
-    isLenient = true
-    encodeDefaults = false
-}
+public val DefaultFormats.Json: Json
+    get() = Json {
+        isLenient = true
+        encodeDefaults = false
+    }
 

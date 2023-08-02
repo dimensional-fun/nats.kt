@@ -7,16 +7,11 @@ import dimensional.knats.tools.child
 import dimensional.knats.transport.Transport
 import dimensional.knats.transport.readOperation
 import dimensional.knats.transport.write
-import dimensional.kyuso.Kyuso
-import kotlinx.coroutines.CoroutineName
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.cancel
+import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.*
-import kotlinx.coroutines.isActive
 import naibu.ext.intoOrNull
 import naibu.logging.logging
 import naibu.monads.unwrapOkOrElse
-import kotlin.coroutines.coroutineContext
 
 @OptIn(InternalNatsApi::class)
 internal class ConnectionImpl(private val resources: ClientResources) : Connection {
@@ -29,8 +24,6 @@ internal class ConnectionImpl(private val resources: ClientResources) : Connecti
 
     override val scope: CoroutineScope = connector.scope.child(CoroutineName("Connection"))
 
-    private val kyuso = Kyuso(scope)
-
     //
     private val mutableState = MutableStateFlow<ConnectionState>(ConnectionState.Disconnected)
     private val mutableOperations = MutableSharedFlow<Operation>(extraBufferCapacity = Int.MAX_VALUE)
@@ -38,20 +31,22 @@ internal class ConnectionImpl(private val resources: ClientResources) : Connecti
     override val state: StateFlow<ConnectionState> = mutableState.asStateFlow()
     override val operations: SharedFlow<Operation> = mutableOperations
 
-    override suspend fun send(operation: Operation) {
+    override suspend fun send(operation: Operation, vararg operations: Operation) {
         val (ts) = requireNotNull(state.value.intoOrNull<ConnectionState.Connected>()) {
-            "This connection is not running."
+            "This NATS connection is not connected or has been detached."
         }
 
-        ts.write(operation)
+        ts.write(operation, *operations)
         ts.flush()
     }
 
     override suspend fun connect() {
-        val ts = connector.connect().unwrapOkOrElse { throw it }
+        val (ts, server) = connector
+            .connect()
+            .unwrapOkOrElse { throw it }
 
         /* start reading operations lol. */
-        val reader = kyuso.dispatch {
+        val reader = scope.launch {
             ts.readOperations {
                 when (it) {
                     is Operation.Ping -> send(Operation.Pong)
@@ -61,11 +56,11 @@ internal class ConnectionImpl(private val resources: ClientResources) : Connecti
         }
 
         /* upgrade the connection. */
-        mutableState.update { ConnectionState.Connected(ts, reader) }
+        mutableState.update { ConnectionState.Connected(ts, server, reader) }
     }
 
     override suspend fun disconnect() {
-        val (ts, reader) = requireNotNull(state.value.intoOrNull<ConnectionState.Connected>()) {
+        val (ts, _, reader) = requireNotNull(state.value.intoOrNull<ConnectionState.Connected>()) {
             "This NATS connection is not connected or has been detached."
         }
 
@@ -82,12 +77,12 @@ internal class ConnectionImpl(private val resources: ClientResources) : Connecti
             disconnect()
         } finally {
             scope.cancel()
-            mutableState.update { ConnectionState.Disconnected }
+            mutableState.update { ConnectionState.Detached }
         }
     }
 
     private suspend fun Transport.readOperations(block: suspend (Operation) -> Unit) {
-        while (coroutineContext.isActive) {
+        while (!incoming.isClosedForRead) {
             val operation = readOperation(resources.parser)
             try {
                 block(operation)
@@ -95,5 +90,8 @@ internal class ConnectionImpl(private val resources: ClientResources) : Connecti
                 log.warn(ex) { "Encountered an exception while handling operation:" }
             }
         }
+
+        mutableState.update { ConnectionState.Disconnected }
+        println("socket closed")
     }
 }

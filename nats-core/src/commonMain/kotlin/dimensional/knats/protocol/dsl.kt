@@ -1,7 +1,7 @@
 package dimensional.knats.protocol
 
 import io.ktor.http.*
-import io.ktor.utils.io.core.*
+import naibu.ext.intoOrNull
 import kotlin.contracts.ExperimentalContracts
 import kotlin.contracts.InvocationKind
 import kotlin.contracts.contract
@@ -9,17 +9,19 @@ import kotlin.contracts.contract
 public fun Publication(
     subject: String,
     body: PublicationBody,
-    replyTo: String? = null
+    replyTo: String? = null,
+    headers: Headers? = null,
 ): Publication =
-    Operation.Pub(subject, replyTo, body)
+    if (headers == null) {
+        Operation.Pub(subject, replyTo, body)
+    } else {
+        Operation.PubWithHeaders(subject, replyTo, headers, body)
+    }
 
-public fun Publication(
-    subject: String,
-    body: PublicationBody,
-    headers: Headers,
-    replyTo: String? = null
-): Publication =
-    Operation.PubWithHeaders(subject, replyTo, headers, body)
+internal fun Publication.withReplyTo(replyTo: String): Publication = when (this) {
+    is Operation.Pub -> copy(replyTo = replyTo)
+    is Operation.PubWithHeaders -> copy(replyTo = replyTo)
+}
 
 /**
  *
@@ -34,3 +36,21 @@ public inline fun Publication(subject: String, block: PublicationBuilder.() -> U
         .apply(block)
         .build()
 }
+
+/**
+ * Convert this [Publication] into a [PublicationBuilder].
+ */
+public fun Publication.toBuilder(): PublicationBuilder {
+    val builder = PublicationBuilder(subject)
+    builder.replyTo = replyTo
+    builder.body = body
+    headers?.let(builder.headers::appendAll)
+
+    return builder
+}
+
+/**
+ * Whether this [Delivery] is to signify no-responders.
+ */
+public val Delivery.isNoResponders: Boolean
+    get() = intoOrNull<Operation.MsgWithHeaders>()?.header?.contains("503") ?: false

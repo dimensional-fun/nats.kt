@@ -39,7 +39,7 @@ public interface Connection {
      * Send an operation to the remote NATS server, this method will throw an exception
      * if the [current state][state] is not [ConnectionState.Connected].
      *
-     * @param operation The operation to send.
+     * @param operation The operations to send.
      */
-    public suspend fun send(operation: Operation)
+    public suspend fun send(operation: Operation, vararg operations: Operation)
 }
