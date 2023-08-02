@@ -2,7 +2,7 @@
 
 An idiomatic & multi-platform [Kotlin](http://java.com) client for the [NATS messaging system](https://nats.io).
 
-> **Warning**  
+> [!WARNING]
 > nats.kt is currently in active development!
 
 - [Discord Server](https://discord.gg/8R4d8RydT4)
