@@ -5,7 +5,7 @@ import kotlinx.serialization.Serializable
 
 @Serializable
 @SerialName("io.nats.jetstream.api.v1.account_info_response")
-public data class AccountInfoResponse(
+public data class AccountInfoResponse_(
     /**
      * Memory Storage being used for Stream Message storage
      */
