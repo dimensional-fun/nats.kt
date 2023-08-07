@@ -43,6 +43,8 @@ public data class WebSocketTransport(val session: DefaultClientWebSocketSession)
         }
     }.channel
 
+    override val isClosed: Boolean get() = !session.isActive
+
     override suspend fun close() {
         session.close()
     }

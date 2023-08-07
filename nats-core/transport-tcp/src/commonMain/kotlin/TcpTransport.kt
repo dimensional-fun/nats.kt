@@ -19,7 +19,9 @@ public class TcpTransport(internal val inner: Connection) : Transport {
     }
 
     private val writeMutex = Mutex()
-    override val incoming: ByteReadChannel get() = inner.input
+
+    override val isClosed: Boolean by inner.socket::isClosed
+    override val incoming: ByteReadChannel by inner::input
 
     override suspend fun close() {
         inner.socket.close()

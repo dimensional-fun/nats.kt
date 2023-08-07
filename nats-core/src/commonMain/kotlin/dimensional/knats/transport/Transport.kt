@@ -1,9 +1,10 @@
 package dimensional.knats.transport
 
 import io.ktor.utils.io.*
-import io.ktor.utils.io.core.*
 
 public interface Transport {
+    public val isClosed: Boolean
+
     /**
      * Bytes being written to the socket by the NATS server.
      */

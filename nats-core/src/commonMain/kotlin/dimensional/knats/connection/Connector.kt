@@ -11,8 +11,6 @@ import dimensional.knats.transport.expect
 import dimensional.knats.transport.readOperation
 import dimensional.knats.transport.write
 import kotlinx.coroutines.*
-import naibu.ext.into
-import naibu.monads.*
 import kotlin.coroutines.coroutineContext
 
 public data class Connector(val resources: ClientResources) {
@@ -35,58 +33,55 @@ public data class Connector(val resources: ClientResources) {
     /**
      *
      */
-    public suspend fun connect(): Result<Pair<Transport, NatsServer>, Throwable> {
+    public suspend fun connect(): Pair<Transport, NatsServer> {
         var lastError: Throwable = IllegalStateException("No Servers Available")
         for (server in servers) {
-            val (ts, info) = when (val result = connect(server)) {
-                is Err -> {
-                    lastError = result.value
-                    continue
-                }
-
-                is Ok -> result.value
+            val (ts, info) = try {
+                connect(server)
+            } catch (ex: Throwable) {
+                lastError = ex
+                continue
             }
 
-            return Ok(ts to NatsServer(server, info))
+            return ts to NatsServer(server, info)
         }
 
-        return lastError.err()
+        throw lastError
     }
 
     /**
      *
      */
-    public suspend fun connect(server: NatsServerAddress): Result<Pair<Transport, NatsInfoOptions>, Throwable> =
-        Result {
-            var ts = resources.transportFactory.connect(server, scope.coroutineContext)
+    public suspend fun connect(server: NatsServerAddress): Pair<Transport, NatsInfoOptions> {
+        var ts = resources.transportFactory.connect(server, scope.coroutineContext)
 
-            /* expect an INFO operation. */
-            val info = ts.expect<Operation.Info>(resources.parser)
+        /* expect an INFO operation. */
+        val info = ts.expect<Operation.Info>(resources.parser)
 
-            /* check if we need to upgrade to TLS */
-            val tlsEnabled = info.options.tlsRequired || info.options.tlsAvailable
-            if (tlsEnabled) ts = ts.upgradeTLS()
+        /* check if we need to upgrade to TLS */
+        val tlsEnabled = info.options.tlsRequired || info.options.tlsAvailable
+        if (tlsEnabled) ts = ts.upgradeTLS()
 
-            /* write Connect & Ping operations. */
-            val connectOptions = NatsConnectOptions(
-                verbose = false,
-                headers = true.some(),
-                tlsRequired = tlsEnabled,
-                noResponders = true
-            )
+        /* write Connect & Ping operations. */
+        val connectOptions = NatsConnectOptions(
+            verbose = false,
+            headers = true,
+            tlsRequired = tlsEnabled,
+            noResponders = true
+        )
 
-            ts.write(Operation.Connect(connectOptions), Operation.Ping)
-            ts.flush()
+        ts.write(Operation.Connect(connectOptions), Operation.Ping)
+        ts.flush()
 
-            /* wait for 'Pong' */
-            while (coroutineContext.isActive) {
-                when (val op = ts.readOperation(resources.parser)) {
-                    is Operation.Pong -> break
-                    is Operation.Ping -> ts.write(Operation.Pong)
-                    else -> error("Expected 'PING' or 'PONG' got $op")
-                }
+        /* wait for 'Pong' */
+        while (coroutineContext.isActive) {
+            when (val op = ts.readOperation(resources.parser)) {
+                is Operation.Pong -> break
+                is Operation.Ping -> ts.write(Operation.Pong)
+                else -> error("Expected 'PING' or 'PONG' got $op")
             }
+        }
 
-            ts to info.options
-        }.into()
+        return ts to info.options
+    }
 }

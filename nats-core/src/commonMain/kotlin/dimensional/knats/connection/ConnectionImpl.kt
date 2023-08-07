@@ -11,7 +11,10 @@ import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.*
 import naibu.ext.intoOrNull
 import naibu.logging.logging
-import naibu.monads.unwrapOkOrElse
+import kotlin.time.Duration
+import kotlin.time.Duration.Companion.seconds
+import kotlin.time.TimeMark
+import kotlin.time.TimeSource
 
 @OptIn(InternalNatsApi::class)
 internal class ConnectionImpl(private val resources: ClientResources) : Connection {
@@ -21,14 +24,18 @@ internal class ConnectionImpl(private val resources: ClientResources) : Connecti
 
     /** Used for connecting to different NATS servers. */
     private val connector = Connector(resources)
-
     override val scope: CoroutineScope = connector.scope.child(CoroutineName("Connection"))
 
     //
     private val mutableState = MutableStateFlow<ConnectionState>(ConnectionState.Disconnected)
-    private val mutableOperations = MutableSharedFlow<Operation>(extraBufferCapacity = Int.MAX_VALUE)
-
     override val state: StateFlow<ConnectionState> = mutableState.asStateFlow()
+
+    //
+    private val mutableLatency = MutableStateFlow<Duration?>(null)
+    override val latency: StateFlow<Duration?> = mutableLatency.asStateFlow()
+
+    //
+    private val mutableOperations = MutableSharedFlow<Operation>(extraBufferCapacity = Int.MAX_VALUE)
     override val operations: SharedFlow<Operation> = mutableOperations
 
     override suspend fun send(operation: Operation, vararg operations: Operation) {
@@ -41,21 +48,8 @@ internal class ConnectionImpl(private val resources: ClientResources) : Connecti
     }
 
     override suspend fun connect() {
-        val (ts, server) = connector
-            .connect()
-            .unwrapOkOrElse { throw it }
-
-        /* start reading operations lol. */
-        val reader = scope.launch {
-            ts.readOperations {
-                when (it) {
-                    is Operation.Ping -> send(Operation.Pong)
-                    else -> mutableOperations.emit(it)
-                }
-            }
-        }
-
-        /* upgrade the connection. */
+        val (ts, server) = connector.connect()
+        val reader = scope.launch { ts.start() }
         mutableState.update { ConnectionState.Connected(ts, server, reader) }
     }
 
@@ -81,8 +75,42 @@ internal class ConnectionImpl(private val resources: ClientResources) : Connecti
         }
     }
 
+    private suspend fun Transport.start() = coroutineScope {
+        var last: TimeMark? = null
+        launch {
+            while (isActive) {
+                delay(30.seconds)
+                if (last != null) {
+                    // TODO: handle missed pongs?
+                }
+
+                last = TimeSource.Monotonic.markNow()
+                send(Operation.Ping)
+            }
+        }
+
+        readOperations {
+            when (it) {
+                /* handle server Pings */
+                Operation.Ping -> send(Operation.Pong)
+
+                /* handle Ping acknowledgements. */
+                Operation.Pong -> {
+                    val latency = last?.elapsedNow()
+                        ?: return@readOperations
+
+                    log.debug { "Received PING acknowledgement; latency=$latency" }
+                    last = null
+                    mutableLatency.update { latency }
+                }
+
+                else -> mutableOperations.emit(it)
+            }
+        }
+    }
+
     private suspend fun Transport.readOperations(block: suspend (Operation) -> Unit) {
-        while (!incoming.isClosedForRead) {
+        while (!isClosed) {
             val operation = readOperation(resources.parser)
             try {
                 block(operation)
