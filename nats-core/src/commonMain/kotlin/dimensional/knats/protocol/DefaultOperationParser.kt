@@ -17,10 +17,12 @@ import naibu.serialization.DefaultFormats
 import naibu.serialization.deserialize
 import naibu.text.charset.decodeIntoString
 
+/**
+ * The default operation parser, uses a [ByteReadChannel] and its suspending capabilities to parse the NATS protocol
+ * without lots of state.
+ */
 public open class DefaultOperationParser : OperationParser {
-    public companion object : DefaultOperationParser() {
-        public const val MAX_OP_NAME_LENGTH: Int = 4
-    }
+    public companion object : DefaultOperationParser();
 
     private val opDecoders: MutableMap<String, suspend (ByteReadChannel) -> Operation> = mutableMapOf()
 
@@ -62,12 +64,12 @@ public open class DefaultOperationParser : OperationParser {
             builder.build()
         }
 
-        addDecoder("HMSG") { packet ->
-            packet.discardValues(WHITESPACE)
+        addDecoder("HMSG") { channel ->
+            channel.discardValues(WHITESPACE)
 
-            val builder = packet.ensureCRLF {
+            val builder = channel.ensureCRLF {
                 /* read initial headers */
-                val args = packet
+                val args = channel
                     .readUntilCRLF()
                     .readBytes()
                     .decodeIntoString()
@@ -86,39 +88,35 @@ public open class DefaultOperationParser : OperationParser {
             }
 
             /* read version, e.g., NATS/1.0 */
-            val version = packet.ensureCRLF {
-                packet.readUntilCRLF()
+            val version = channel.ensureCRLF {
+                channel.readUntilCRLF()
             }
 
             builder.version = version.copy().readText()
 
             /* read headers */
-            packet.ensureCRLF {
-                var read = version.remaining + 4
-                while (read < builder.hdrLen) {
-                    val header = packet.ensureCRLF {
-                        packet.readUntilCRLF()
-                    }
-
-                    read += header.remaining + 2
-
-                    val name = header.readUntilDelimiter(COLON)
-                    if (header.readByte() != COLON) {
-                        throw NatsException.ProtocolException("Expected ':' after header name")
-                    }
-
-                    header.discardValues(WHITESPACE)
-                    builder.headers.append(
-                        name.readBytes().decodeIntoString(),
-                        header.readBytes().decodeIntoString()
-                    )
+            var read = version.remaining + 4
+            while (read < builder.hdrLen) {
+                val name = channel.readUntilDelimiter(COLON)
+                if (channel.readByte() != COLON) {
+                    throw NatsException.ProtocolException("Expected ':' after header name")
                 }
+
+                read += name.remaining + 1 + channel.discardValues(WHITESPACE)
+
+                /* read header value & update amount of read bytes. */
+                val value = channel.ensureCRLF { channel.readUntilCRLF() }
+                read += value.remaining + 2
+
+                /* */
+                builder.headers.append(name.readText(), value.readText())
             }
 
+            channel.ensureCRLF()
+
             /* read payload len */
-            val payloadLength = builder.totLen - builder.hdrLen
-            builder.payload = payloadLength.takeIf { it > 0 }
-                ?.let { len -> packet.readPacket(len) }
+            builder.payload = (builder.totLen - builder.hdrLen).takeIf { it > 0 }
+                ?.let { len -> channel.readPacket(len) }
 
             builder.build()
         }

@@ -6,11 +6,12 @@ import io.ktor.client.engine.*
 import io.ktor.client.plugins.websocket.*
 import io.ktor.utils.io.*
 import io.ktor.websocket.*
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.isActive
 import kotlin.coroutines.CoroutineContext
 import kotlin.jvm.JvmInline
 
-public data class WebSocketTransport(val session: DefaultClientWebSocketSession) : Transport {
+public data class WebSocketTransport(val session: DefaultClientWebSocketSession) : Transport, CoroutineScope by session {
     @JvmInline
     public value class Factory(public val httpClient: HttpClient) : TransportFactory {
         public constructor(engine: HttpClientEngineFactory<*>) : this(HttpClient(engine) {

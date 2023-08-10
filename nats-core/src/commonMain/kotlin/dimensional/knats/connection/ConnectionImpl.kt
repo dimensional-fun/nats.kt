@@ -110,7 +110,7 @@ internal class ConnectionImpl(private val resources: ClientResources) : Connecti
     }
 
     private suspend fun Transport.readOperations(block: suspend (Operation) -> Unit) {
-        while (!isClosed) {
+        while (!incoming.isClosedForWrite) {
             val operation = readOperation(resources.parser)
             try {
                 block(operation)

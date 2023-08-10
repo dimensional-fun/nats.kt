@@ -4,11 +4,12 @@ import dimensional.knats.NatsServerAddress
 import io.ktor.network.selector.*
 import io.ktor.network.sockets.*
 import io.ktor.utils.io.*
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlin.coroutines.CoroutineContext
 
-public class TcpTransport(internal val inner: Connection) : Transport {
+public class TcpTransport(private val inner: Connection) : Transport, CoroutineScope by inner.socket {
     public companion object : TransportFactory {
         override suspend fun connect(address: NatsServerAddress, context: CoroutineContext): Transport = TcpTransport(
             aSocket(SelectorManager(context))

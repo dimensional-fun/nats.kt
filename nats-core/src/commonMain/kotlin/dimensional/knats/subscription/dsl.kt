@@ -44,7 +44,7 @@ public inline fun <reified E : SubscriptionEvent> Subscription.on(
     noinline block: suspend E.() -> Unit,
 ): Job = events.buffer(Channel.UNLIMITED)
     .filterIsInstance<E>()
-    .onEach { scope.launch { block(it) } }
+    .onEach { block(it) }
     .launchIn(scope)
 
 ///**
