@@ -11,10 +11,10 @@ import dimensional.knats.subscription.Subscription
 import dimensional.knats.subscription.SubscriptionImpl
 import dimensional.knats.tools.NUID
 import kotlinx.coroutines.CompletableDeferred
-import kotlinx.coroutines.flow.filterIsInstance
-import kotlinx.coroutines.flow.launchIn
-import kotlinx.coroutines.flow.onEach
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.flow.*
 import naibu.concurrency.ConcurrentHashMap
+import naibu.concurrency.ConcurrentHashSet
 import naibu.ext.into
 import kotlin.collections.set
 
@@ -44,6 +44,8 @@ internal data class ClientImpl(override val resources: ClientResources) : Client
             .onEach { mutableSubscriptions[it.sid]?.emit(it) }
             .launchIn(conn.scope)
     }
+
+    override fun dispatcher(): Dispatcher = DispatcherImpl(this)
 
     override suspend fun subscribe(subject: String, queueGroup: String?): Subscription =
         SubscriptionImpl(this, NUID.next(), subject, queueGroup).also {
@@ -84,28 +86,31 @@ internal data class ClientImpl(override val resources: ClientResources) : Client
             return if (length <= len) this else substring(len)
         }
 
-//    internal class Dispatcher(val client: ClientImpl) {
-//        private lateinit var job: Job
-//        private val subscriptions = ConcurrentHashSet<String>()
-//
-//        fun start(callback: suspend (Delivery) -> Unit) {
-//            require (!::job.isInitialized) {
-//                "This dispatcher has already been started."
-//            }
-//
-//            job = client.conn.operations
-//                .filterIsInstance<Delivery>()
-//                .filter { it.subject in subscriptions }
-//                .onEach(callback)
-//                .launchIn(client.conn.scope)
-//        }
-//
-//        suspend fun unsubscribe(subject: String, after: Int? = null) {
-//            client.conn.send(Operation.Unsub(subject, after))
-//        }
-//
-//        suspend fun subscribe(subject: String) {
-//            client.conn.send(Operation.Sub(subject, null, client.resources.nuid.next()))
-//        }
-//    }
+    internal class DispatcherImpl(val client: ClientImpl) : Dispatcher {
+        private lateinit var job: Job
+        private val subscriptions = ConcurrentHashSet<String>()
+
+        override fun start(block: suspend (Delivery) -> Unit) {
+            require(!::job.isInitialized) {
+                "This dispatcher has already been started."
+            }
+
+            job = client.conn.operations
+                .buffer()
+                .filterIsInstance<Delivery>()
+                .filter { it.sid in subscriptions }
+                .onEach(block)
+                .launchIn(client.conn.scope)
+        }
+
+        suspend fun unsubscribe(subject: String, after: Int? = null) {
+            client.conn.send(Operation.Unsub(subject, after))
+        }
+
+        override suspend fun subscribe(subject: String) {
+            val sid = client.resources.nuid.next()
+            client.conn.send(Operation.Sub(subject, null, sid))
+            subscriptions += sid
+        }
+    }
 }

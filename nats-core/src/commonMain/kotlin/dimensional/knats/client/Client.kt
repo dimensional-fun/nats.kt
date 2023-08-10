@@ -28,6 +28,8 @@ public interface Client {
      */
     public suspend fun connect()
 
+    public fun dispatcher(): Dispatcher
+
     /**
      *
      */
