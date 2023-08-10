@@ -4,6 +4,8 @@ import com.squareup.kotlinpoet.ClassName
 
 const val proto = "nats.jetstream.protocol"
 
+infix fun String.pk(other: String): ClassName = ClassName(proto, other)
+
 val domains = mapOf(
     "retention" to d("StreamRetentionPolicy"),
     "storage" to d("StreamStorageType"),

@@ -1,8 +1,8 @@
 package codegen
 
 import com.squareup.kotlinpoet.FileSpec
+import json.schema.JsonSchema
 import kotlinx.serialization.json.Json
-import kotlinx.serialization.json.JsonObject
 import org.gradle.api.DefaultTask
 import org.gradle.api.provider.Property
 import org.gradle.api.tasks.OutputDirectory
@@ -37,13 +37,13 @@ abstract class GenerateJetStreamClasses : DefaultTask() {
 
                 println("Generated classes for: $schemaIdentifier")
 
-                val schemaJson = cl.getResourceAsStream("schemas/$schemaIdentifier.json")
+                val schema = cl.getResourceAsStream("schemas/$schemaIdentifier.json")
                     ?.bufferedReader()
                     ?.readText()
-                    ?.let { json.decodeFromString(JsonObject.serializer(), it) }
+                    ?.let { json.decodeFromString(JsonSchema.serializer(), it) }
                     ?: error("Unable to find json file for: $schemaIdentifier")
 
-                createJsonSchema(schemaIdentifier, schemaJson).generate()
+                schema.createFileSpec(schemaIdentifier).generate()
             }
         }
     }

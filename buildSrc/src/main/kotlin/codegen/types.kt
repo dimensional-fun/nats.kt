@@ -3,6 +3,7 @@ package codegen
 import codegen.PropertyType.Companion.parse
 import com.squareup.kotlinpoet.*
 import com.squareup.kotlinpoet.ParameterizedTypeName.Companion.parameterizedBy
+import json.schema.JsonSchema
 import kotlinx.serialization.json.*
 
 data class PropertyType(val name: String, val members: List<String>) {
@@ -22,8 +23,8 @@ data class PropertyType(val name: String, val members: List<String>) {
 
 val TypeName.nullable: TypeName get() = copy(nullable = true)
 
-fun JsonObject.guessType(): TypeName {
-    val type = get("type")?.parse()
+fun JsonSchema.guessType(): TypeName {
+    val type = type?.parse()
         ?: error("no 'type' field.")
 
     val real = when (type.name) {
@@ -36,12 +37,11 @@ fun JsonObject.guessType(): TypeName {
         "object" -> JsonObject::class.asTypeName()
 
         "array" -> {
-            val item = get("items")
-                ?.jsonObject
-                ?.guessType()
-                ?: error("Unable to guess item type of array: ${get("items")}")
+//            val item = items
+//                ?.guessType()
+//                ?: error("Unable to guess item type of array: ${get("items")}")
 
-            LIST.parameterizedBy(item)
+            LIST.parameterizedBy(ANY)
         }
 
         // TODO: durations, e.g., nanoseconds
@@ -53,8 +53,8 @@ fun JsonObject.guessType(): TypeName {
     return real.copy(nullable = type.nullable)
 }
 
-fun JsonObject.guessIntegerType(): TypeName {
-    val comment = get("\$comment")?.jsonPrimitive?.contentOrNull
+fun JsonSchema.guessIntegerType(): TypeName {
+    val comment = comment.takeUnless { it.isEmpty() }
         ?.lowercase()
         ?: return INT
 
