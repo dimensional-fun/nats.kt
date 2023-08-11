@@ -1,5 +1,6 @@
 package codegen
 
+import com.squareup.kotlinpoet.ANY
 import com.squareup.kotlinpoet.FileSpec
 import json.schema.JsonSchema
 import kotlinx.serialization.json.Json

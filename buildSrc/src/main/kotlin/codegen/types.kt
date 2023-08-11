@@ -21,11 +21,11 @@ data class PropertyType(val name: String, val members: List<String>) {
     val nullable: Boolean get() = "null" in members
 }
 
-val TypeName.nullable: TypeName get() = copy(nullable = true)
+fun TypeName.asNullable(value: Boolean = true): TypeName = copy(nullable = value)
 
 fun JsonSchema.guessType(): TypeName {
     val type = type?.parse()
-        ?: error("no 'type' field.")
+        ?: return ANY
 
     val real = when (type.name) {
         "string" -> STRING

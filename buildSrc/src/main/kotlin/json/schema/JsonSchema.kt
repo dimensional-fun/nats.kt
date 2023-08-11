@@ -50,7 +50,7 @@ data class JsonSchema(
     // TODO:
     val propertyNames: JsonSchema? = null,
     val const: JsonElement? = null,
-    val enum: List<JsonElement> = emptyList(),
+    val enum: List<JsonPrimitive> = emptyList(),
     // TODO:
     val type: JsonElement? = null,
     val format: String? = null,

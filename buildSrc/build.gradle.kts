@@ -1,6 +1,8 @@
+val kotlinVersion = "1.9.0"
 plugins {
     groovy
     `kotlin-dsl`
+    kotlin("plugin.serialization") version "1.9.0"
 }
 
 repositories {
@@ -8,7 +10,6 @@ repositories {
     gradlePluginPortal()
 }
 
-val kotlinVersion = "1.9.0"
 dependencies {
     implementation(kotlin("gradle-plugin", version = kotlinVersion))
     implementation(kotlin("serialization", version = kotlinVersion))
