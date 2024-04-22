@@ -33,6 +33,7 @@ kotlin {
         implementation("fun.dimensional:kyuso:1.1.0")
 
         implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.7.1")
+        implementation("org.jetbrains.kotlinx:kotlinx-datetime:0.4.0")
         implementation("org.jetbrains.kotlinx:atomicfu:0.21.0")
 
         implementation("org.jetbrains.kotlinx:kotlinx-serialization-core:1.5.1")
