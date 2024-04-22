@@ -1,15 +1,16 @@
-import dimensional.knats.client.Client
-import dimensional.knats.subscription.deliveries
-import dimensional.knats.subscription.event.SubscriptionDeliveryEvent
+import nats.core.client.Client
+import nats.core.subscription.deliveries
+import nats.core.subscription.event.SubscriptionDeliveryEvent
 import io.ktor.http.*
 import io.ktor.util.*
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.onEach
+import nats.core.protocol.Subject
 
 public suspend fun listener(client: Client): Unit = coroutineScope {
-    client.subscribe(">").deliveries
+    client.subscribe(Subject(">")).deliveries
         .map { it.format() }
         .onEach(::println)
         .launchIn(this)

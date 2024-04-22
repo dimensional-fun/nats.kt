@@ -1,6 +1,6 @@
-package dimensional.knats.transport
+package nats.core.transport
 
-import dimensional.knats.NatsServerAddress
+import nats.core.NatsServerAddress
 import io.ktor.client.*
 import io.ktor.client.engine.*
 import io.ktor.client.plugins.websocket.*
@@ -31,6 +31,8 @@ public data class WebSocketTransport(val session: DefaultClientWebSocketSession)
         }
     }.channel
 
+    // not sure what the performance implications are by merging all incoming frames into a single channel but i'm
+    // assuming the NATS server does not fragment operations into multiple websocket frames like the TCP transport.
     override val incoming: ByteReadChannel = session.writer(autoFlush = true) {
         while (!channel.isClosedForWrite) {
             val frame = try {

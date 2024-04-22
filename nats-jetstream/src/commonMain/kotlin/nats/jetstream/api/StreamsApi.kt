@@ -1,22 +1,54 @@
 package nats.jetstream.api
 
-import kotlinx.serialization.ExperimentalSerializationApi
-import kotlinx.serialization.InternalSerializationApi
-import kotlinx.serialization.serializer
-import naibu.ext.intoOrNull
-import nats.jetstream.client.JetStream
-import nats.jetstream.protocol.Response
+import nats.core.protocol.Subject
+import nats.core.protocol.json
+import nats.jetstream.protocol.*
+import nats.jetstream.protocol.domain.StreamConfig
+import kotlin.contracts.ExperimentalContracts
+import kotlin.contracts.InvocationKind
+import kotlin.contracts.contract
 import kotlin.jvm.JvmInline
 
 @JvmInline
-public value class StreamsApi(override val js: JetStream) : JetStreamApiClient {
-//    public suspend fun create(request: StreamCreateRequest): StreamCreateResponse =
-//        want(request("API.STREAM.CREATE".js) { json(request) })
-//
-//    public suspend fun delete(): StreamDeleteResponse =
-//        want(request("API.STREAM.DELETE".js))
+public value class StreamsApi(public val root: JetStreamApi) {
+    public val subject: Subject get() = root.subject + "STREAM"
 
-    @OptIn(InternalSerializationApi::class, ExperimentalSerializationApi::class)
-    private inline fun <reified T : Response> want(response: Response) = response.intoOrNull<T>()
-        ?: error("Received ${response::class.serializer().descriptor.serialName} instead of ${T::class.serializer().descriptor.serialName}")
+    public suspend fun create(request: StreamCreateRequest): StreamCreateResponse =
+        root.want(root.request(subject + "CREATE" + request.config.name) { json(request) })
+
+    public suspend fun list(request: StreamsRequest): StreamListResponse =
+        root.want(root.request(subject + "LIST") { json(request) })
+
+    public suspend fun names(request: StreamsRequest): StreamNamesResponse =
+        root.want(root.request(subject + "NAMES") { json(request) })
+
+    public suspend fun info(name: String, request: StreamInfoRequest): StreamInfoResponse =
+        root.want(root.request(subject + "INFO" + name) { json(request) })
+
+    public suspend fun delete(name: String): StreamDeleteResponse =
+        root.want(root.request(subject + "DELETE" + name))
+}
+
+@OptIn(ExperimentalContracts::class)
+public suspend inline fun StreamsApi.create(
+    name: String,
+    block: StreamConfig.Builder.() -> Unit = {},
+): StreamCreateResponse {
+    contract { callsInPlace(block, InvocationKind.EXACTLY_ONCE) }
+    return create(StreamCreateRequest(StreamConfig.Builder(name).apply(block).build()))
+}
+
+@OptIn(ExperimentalContracts::class)
+public suspend inline fun StreamsApi.info(
+    name: String,
+    block: StreamInfoRequest.Builder.() -> Unit = {},
+): StreamInfoResponse {
+    contract { callsInPlace(block, InvocationKind.EXACTLY_ONCE) }
+    return info(name, StreamInfoRequest.Builder().apply(block).build())
+}
+
+@OptIn(ExperimentalContracts::class)
+public suspend inline fun StreamsApi.list(block: StreamsRequest.Builder.() -> Unit = {}): StreamListResponse {
+    contract { callsInPlace(block, InvocationKind.EXACTLY_ONCE) }
+    return list(StreamsRequest.Builder().apply(block).build())
 }

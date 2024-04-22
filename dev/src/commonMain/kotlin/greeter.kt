@@ -1,26 +1,20 @@
-import dimensional.knats.client.Client
-import dimensional.knats.protocol.payload
-import dimensional.knats.subscription.event.SubscriptionDeliveryEvent
-import dimensional.knats.subscription.event.SubscriptionUnsubscribedEvent
-import dimensional.knats.subscription.on
+import nats.core.client.Client
+import nats.core.subscription.event.SubscriptionDeliveryEvent
+import nats.core.subscription.event.SubscriptionUnsubscribedEvent
+import nats.core.subscription.on
 import kotlinx.coroutines.coroutineScope
+import nats.core.protocol.Subject
 
 public suspend fun greeter(client: Client): Unit = coroutineScope {
-    val sub = client.subscribe("greet")
+    val sub = client.subscribe(Subject("greet"))
 
-    sub.on<SubscriptionUnsubscribedEvent> {
+    sub.on<SubscriptionUnsubscribedEvent>(this) {
         println("subscription $sub has been unsubscribed.")
     }
 
     sub.on<SubscriptionDeliveryEvent>(this) {
-        val payload = delivery.getPayload()
-        if (payload == null) {
-            reply { payload("incorrect payload") }
-            return@on
-        }
-
-        reply {
-            payload("Hello, ${payload.readText()}")
-        }
+        delivery.readText()
+            ?.let { reply("Hello, $it!") }
+            ?: return@on reply("incorrect payload")
     }
 }
