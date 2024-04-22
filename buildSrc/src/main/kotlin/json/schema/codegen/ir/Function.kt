@@ -1,5 +1,6 @@
 package json.schema.codegen.ir
 
+import com.squareup.kotlinpoet.AnnotationSpec
 import com.squareup.kotlinpoet.CodeBlock
 
 data class Function(
@@ -7,4 +8,5 @@ data class Function(
     val receiver: Definition? = null,
     val parameters: List<Parameter> = emptyList(),
     override val docs: CodeBlock = EmptyCodeBlock,
-) : IR, Documented
+    override val annotations: List<AnnotationSpec> = emptyList(),
+) : IR, Documented, Annotated

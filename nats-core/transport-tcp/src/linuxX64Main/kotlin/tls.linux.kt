@@ -1,4 +1,4 @@
-package dimensional.knats.transport
+package nats.core.transport
 
 import io.ktor.network.sockets.*
 import io.ktor.network.tls.*

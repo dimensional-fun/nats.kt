@@ -1,6 +1,6 @@
-package dimensional.knats.transport
+package nats.core.transport
 
-import dimensional.knats.NatsServerAddress
+import nats.core.NatsServerAddress
 import io.ktor.network.selector.*
 import io.ktor.network.sockets.*
 import io.ktor.utils.io.*
@@ -17,6 +17,7 @@ public class TcpTransport(private val inner: Connection) : Transport, CoroutineS
                 .connect(address.host, address.port)
                 .connection()
         )
+
     }
 
     private val writeMutex = Mutex()

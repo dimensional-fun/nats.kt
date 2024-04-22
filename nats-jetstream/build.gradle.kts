@@ -1,4 +1,4 @@
-import codegen.GenerateJetStreamClasses
+import json.schema.codegen.task.GenerateJetStreamClasses
 
 with(kotlin.sourceSets["commonMain"]) {
     kotlin.srcDir("src/commonGenerated")
