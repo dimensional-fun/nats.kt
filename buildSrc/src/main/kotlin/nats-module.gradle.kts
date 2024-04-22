@@ -26,9 +26,9 @@ kotlin {
 
         implementation("io.github.oshai:kotlin-logging:5.0.0")
 
-        implementation("naibu.stdlib:naibu-io:1.3-RC.2")
-        implementation("naibu.stdlib:naibu-core:1.3-RC.2")
-        implementation("naibu.stdlib:naibu-ktor-io:1.3-RC.2")
+        implementation("naibu.stdlib:naibu-io:1.3-RC.3")
+        implementation("naibu.stdlib:naibu-core:1.3-RC.3")
+        implementation("naibu.stdlib:naibu-ktor-io:1.3-RC.3")
 
         implementation("fun.dimensional:kyuso:1.1.0")
 

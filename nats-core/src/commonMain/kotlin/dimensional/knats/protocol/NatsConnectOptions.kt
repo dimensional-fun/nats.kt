@@ -32,31 +32,31 @@ public data class NatsConnectOptions(
     /**
      * The user's JWT.
      */
-    val jwt: Option<String> = None,
+    val jwt: String? = null,
 
     /**
      * Public ney.
      */
     @SerialName("nkey")
-    val nKey: Option<String> = None,
+    val nKey: String? = null,
 
     /**
      * Signed nonce, encoded to Base64 url.
      */
     @SerialName("sig")
-    val signature: Option<String> = None,
+    val signature: String? = null,
 
     /**
      * The name of the client.
      */
-    val name: Option<String> = None,
+    val name: String? = null,
 
     /**
      * If set to `true`, the server (version 1.2.0+) will not send originating messages from this connection to its own
      * subscriptions. Clients should set this to `true` only for server supporting this feature, which is when proto in
      * the INFO protocol is set to at least 1.
      */
-    val echo: Option<Boolean> = None,
+    val echo: Boolean? = null,
 
     /**
      * The implementation language of the client.
@@ -71,12 +71,12 @@ public data class NatsConnectOptions(
     /**
      * The connection username.
      */
-    val user: Option<String> = None,
+    val user: String? = null,
 
     /**
      * The connection password.
      */
-    val pass: Option<String> = None,
+    val pass: String? = null,
 
     /**
      * The version of the client.
@@ -87,12 +87,12 @@ public data class NatsConnectOptions(
      * The client's authorization token (if [dimensional.knats.protocol.NatsInfoOptions.authRequired] is set).
      */
     @SerialName("auth_token")
-    val authToken: Option<String> = None,
+    val authToken: String? = null,
 
     /**
      * Whether the client supports headers.
      */
-    val headers: Option<Boolean> = None,
+    val headers: Boolean? = null,
 
     /**
      */

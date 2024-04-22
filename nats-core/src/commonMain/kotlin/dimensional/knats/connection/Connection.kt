@@ -5,6 +5,7 @@ import dimensional.knats.protocol.Operation
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.StateFlow
+import kotlin.time.Duration
 
 @InternalNatsApi
 public interface Connection {
@@ -14,6 +15,11 @@ public interface Connection {
      * The current state of the connection.
      */
     public val state: StateFlow<ConnectionState>
+
+    /**
+     * The calculated RTT for PING/PONGs.
+     */
+    public val latency: StateFlow<Duration?>
 
     /**
      * The operations received by this connection.

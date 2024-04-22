@@ -1,9 +1,11 @@
 package dimensional.knats.transport
 
 import io.ktor.utils.io.*
-import io.ktor.utils.io.core.*
+import kotlinx.coroutines.CoroutineScope
 
-public interface Transport {
+public interface Transport : CoroutineScope {
+    public val isClosed: Boolean
+
     /**
      * Bytes being written to the socket by the NATS server.
      */

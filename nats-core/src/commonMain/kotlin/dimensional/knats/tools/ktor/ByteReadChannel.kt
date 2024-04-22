@@ -15,6 +15,10 @@ import naibu.io.slice.get
 import naibu.math.toIntSafe
 import io.ktor.utils.io.bits.Memory as KtorMemory
 
+public suspend fun ByteReadChannel.readUntilDelimiter(delimiter: Byte): ByteReadPacket = buildPacket {
+    readUntilDelimitersTo(byteArrayOf(delimiter), this)
+}
+
 /**
  * Copies bytes into [out] until either provided delimiters occur.
  */
@@ -69,7 +73,7 @@ internal suspend fun ByteReadChannel.discardValues(values: ByteArray): Long = Sm
     return copiedTotal
 }
 
-internal suspend fun ByteReadChannel.readA(size: Int, block: (source: KtorMemory, range: LongRange) -> Int): Int =
+internal suspend fun ByteReadChannel.readA(size: Int = 1, block: (source: KtorMemory, range: LongRange) -> Int): Int =
     read(size) { source, start, end -> block(source, start..<end) }
 
 internal fun KtorMemory.copyTo(dst: Memory, dstOffset: Long, range: LongRange) =
@@ -87,7 +91,7 @@ internal suspend fun ByteReadChannel.peekTo(dst: Memory, dstOffset: Long, length
 }
 
 internal suspend fun ByteReadChannel.tryPeek(offset: Long = 0): Byte = SmallMemoryPool.use {
-    readA(1) { source, range ->
+    readA { source, range ->
         it[0] = source[range.first + offset]
         0
     }
@@ -97,9 +101,9 @@ internal suspend fun ByteReadChannel.tryPeek(offset: Long = 0): Byte = SmallMemo
 
 internal suspend fun ByteReadChannel.readFully(dst: Memory, offset: Long, length: Int) {
     var read = 0
-    while (read < length) read { source, start, end ->
-        val copying = (length - read).coerceAtMost((start..<end).size.toInt())
-        source.copyTo(dst.ktor(), start, copying.toLong(), offset + read)
+    while (read < length) readA { source, range ->
+        val copying = (length - read).coerceAtMost(range.size.toInt())
+        source.copyTo(dst.ktor(), range.first, copying.toLong(), offset + read)
         read += copying
         copying
     }
