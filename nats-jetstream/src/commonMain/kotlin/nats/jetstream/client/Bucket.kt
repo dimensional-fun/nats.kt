@@ -18,7 +18,8 @@ public class Bucket(public val store: BucketStore, public val name: String) {
      * @return The [BucketEntry] instance for the given key, or `null` if the key was deleted.
      * @throws JetStreamApiException
      */
-    public suspend fun get(key: String): BucketEntry? = get0(key)?.takeIf { it.operation == KeyValueOperation.Put }
+    public suspend fun get(key: String): BucketEntry? =
+        get0(key)?.takeIf { it.operation == KeyValueOperation.Put }
 
     /**
      * Get an entry from this bucket with the given key and revision.
@@ -29,7 +30,9 @@ public class Bucket(public val store: BucketStore, public val name: String) {
      * @throws JetStreamApiException
      */
     public suspend fun get(key: String, revision: Long): BucketEntry? =
-        BucketEntry.Info(stream.messages.fetch { sequence(revision) }).takeIf { it.key == key }
+        stream.messages.get { sequence(revision) }
+            ?.let(BucketEntry::Info)
+            ?.takeIf { it.key == key }
 
 
     /**
