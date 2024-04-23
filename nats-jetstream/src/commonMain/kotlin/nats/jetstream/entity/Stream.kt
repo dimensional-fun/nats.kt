@@ -7,12 +7,12 @@ import nats.jetstream.protocol.domain.StreamInfo
 public class Stream(
     override val client: JetStreamClient,
     override val name: String,
-    public val data: StreamInfo
+    public val info: StreamInfo
 ) : StreamBehavior {
     /**
      * The description of this stream.
      */
-    public val description: String? get() = data.config.description
+    public val description: String? get() = info.config.description
 
     override suspend fun resolve(): Stream = this
 
@@ -25,5 +25,5 @@ public class Stream(
 
     override fun hashCode(): Int = arrayOf(name).contentHashCode()
 
-    override fun toString(): String = "Stream(name=$name, data=$data, client=$client"
+    override fun toString(): String = "Stream(name=$name, data=$info, client=$client"
 }

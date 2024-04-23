@@ -27,6 +27,9 @@ public value class StreamsApi(public val root: JetStreamApi) {
 
     public suspend fun delete(name: String): StreamDeleteResponse =
         root.want(root.request(subject + "DELETE" + name))
+
+    public suspend fun getMessage(name: String, request: StreamMessageGetRequest): StreamMessageGetResponse =
+        root.want(root.request(subject + "MSG.GET" + name) { json(request) })
 }
 
 @OptIn(ExperimentalContracts::class)

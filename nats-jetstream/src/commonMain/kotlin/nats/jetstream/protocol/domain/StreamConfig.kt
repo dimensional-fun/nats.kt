@@ -2,6 +2,7 @@ package nats.jetstream.protocol.domain
 
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
+import nats.core.protocol.Subject
 import nats.core.protocol.optional.Optional
 import nats.core.protocol.optional.delegate.delegate
 import nats.core.protocol.optional.mapCopy
@@ -25,7 +26,7 @@ public data class StreamConfig(
      * A list of subjects to consume, supports wildcards. Must be empty when a mirror is configured. May be empty when
      * sources are configured.
      */
-    val subjects: List<String> = emptyList(),
+    val subjects: List<Subject> = emptyList(),
     /**
      * Hoe messages are retained in the Stream, once this is exceeded old messages are removed.
      */
@@ -150,7 +151,7 @@ public data class StreamConfig(
     public class Builder(public var name: String) {
         public var description: String? = null
 
-        public var subjects: List<String> = emptyList()
+        public var subjects: List<Subject> = emptyList()
 
         public var retention: StreamRetentionPolicy = StreamRetentionPolicy.Limits
 
@@ -205,6 +206,10 @@ public data class StreamConfig(
 
         public var discardNewPerSubject: Boolean = false
 
+        public fun source(source: StreamMirror) {
+            sources?.add(source) ?: run { sources = mutableListOf(source) }
+        }
+
         public fun build(): StreamConfig = StreamConfig(
             name = name,
             description = description,
@@ -238,21 +243,23 @@ public data class StreamConfig(
 }
 
 @OptIn(ExperimentalContracts::class)
-public inline fun StreamConfig.Builder.mirror(block: StreamMirror.Builder.() -> Unit) {
+public inline fun StreamConfig.Builder.mirror(name: String, block: StreamMirror.Builder.() -> Unit) {
     contract { callsInPlace(block, InvocationKind.EXACTLY_ONCE) }
     mirror = StreamMirror.Builder(name).apply(block).build()
 }
 
 @OptIn(ExperimentalContracts::class)
-public inline fun StreamConfig.Builder.republish(block: StreamRepublishConfiguration.Builder.() -> Unit) {
+public inline fun StreamConfig.Builder.republish(
+    src: String,
+    dest: String,
+    block: StreamRepublishConfiguration.Builder.() -> Unit
+) {
     contract { callsInPlace(block, InvocationKind.EXACTLY_ONCE) }
-    republish = StreamRepublishConfiguration.Builder(name, name).apply(block).build()
+    republish = StreamRepublishConfiguration.Builder(src, dest).apply(block).build()
 }
 
 @OptIn(ExperimentalContracts::class)
-public inline fun StreamConfig.Builder.source(block: StreamMirror.Builder.() -> Unit) {
+public inline fun StreamConfig.Builder.source(name: String, block: StreamMirror.Builder.() -> Unit) {
     contract { callsInPlace(block, InvocationKind.EXACTLY_ONCE) }
-
-    val mirror = StreamMirror.Builder(name).apply(block).build()
-    sources?.add(mirror) ?: run { sources = mutableListOf(mirror) }
+    source(StreamMirror.Builder(name).apply(block).build())
 }

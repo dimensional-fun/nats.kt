@@ -1,5 +1,5 @@
 kotlin {
-    mingwX64()
+//    mingwX64()
 
     sourceSets["commonMain"].dependencies {
         api(projects.natsCore)

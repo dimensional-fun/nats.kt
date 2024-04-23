@@ -1,11 +1,11 @@
 kotlin {
-    mingwX64 {
-        binaries {
-            executable {
-                entryPoint = "main"
-            }
-        }
-    }
+//    mingwX64 {
+//        binaries {
+//            executable {
+//                entryPoint = "main"
+//            }
+//        }
+//    }
 
     sourceSets["commonMain"].dependencies {
         implementation(projects.natsCore)
@@ -18,9 +18,9 @@ kotlin {
         implementation(projects.natsCore.transportTcp)
     }
 
-    sourceSets["mingwX64Main"].dependencies {
-        implementation("io.ktor:ktor-client-winhttp:2.3.2")
-    }
+//    sourceSets["mingwX64Main"].dependencies {
+//        implementation("io.ktor:ktor-client-winhttp:2.3.10")
+//    }
 
     sourceSets["jvmMain"].dependencies {
         implementation(projects.natsCore.transportTcp)
