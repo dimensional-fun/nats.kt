@@ -1,12 +1,12 @@
-package nats.jetstream.client
+package nats.jetstream.client.kv
 
 import kotlinx.datetime.Instant
 import nats.core.protocol.HasPayload
-import nats.jetstream.entity.MessageInfo
+import nats.jetstream.client.stream.MessageInfo
 import nats.jetstream.protocol.domain.KeyValueOperation
 import nats.jetstream.tools.BucketAndKey
 
-public sealed class BucketEntry : HasPayload {
+public sealed class KeyValueBucketEntry : HasPayload {
     /**
      *
      */
@@ -41,7 +41,7 @@ public sealed class BucketEntry : HasPayload {
      */
     public val key: String get() = id.key
 
-    public class Info(public val message: MessageInfo) : HasPayload by message, BucketEntry() {
+    public class Info(public val message: MessageInfo) : HasPayload by message, KeyValueBucketEntry() {
         override val id: BucketAndKey get() = BucketAndKey(message.subject.value)
 
         override val delta: Long get() = 0

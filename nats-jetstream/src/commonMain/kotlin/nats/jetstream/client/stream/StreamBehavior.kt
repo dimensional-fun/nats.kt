@@ -1,12 +1,8 @@
-package nats.jetstream.entity.behavior
+package nats.jetstream.client.stream
 
-import nats.jetstream.api.catchNotFound
 import nats.jetstream.api.JetStreamApiException
-import nats.jetstream.client.ConsumersClient
+import nats.jetstream.api.catchNotFound
 import nats.jetstream.client.JetStreamClient
-import nats.jetstream.client.MessagesClient
-import nats.jetstream.client.fetch
-import nats.jetstream.entity.Stream
 
 public interface StreamBehavior {
     /**
@@ -58,23 +54,25 @@ public interface StreamBehavior {
     /**
      * Delete this stream.
      *
-     * @return `true` if the stream was deleted, or `false` <wip>.
      * @throws JetStreamApiException if an error occurs while deleting the stream.
      */
-    public suspend fun delete(): Boolean = client.streams.api.delete(name).success
+    public suspend fun delete() {
+        client.streams.api.delete(name)
+    }
 
     /**
-     * Delete this stream, or return `null` if the stream does not exist.
+     * Delete this stream regardless of whether it exists.
+     *
+     * @return `true` if the stream was deleted, `false` if the stream does not exist.
      */
-    // I'm not sure what the boolean return value is supposed to signify here ?
-    public suspend fun remove(): Boolean? = catchNotFound { delete() }
+    public suspend fun remove(): Boolean = catchNotFound { delete() } != null
 }
 
 public inline fun StreamBehavior(
-    js: JetStreamClient,
+    client: JetStreamClient,
     name: String,
 ): StreamBehavior = object : StreamBehavior {
-    override val client: JetStreamClient get() = js
+    override val client: JetStreamClient get() = client
     override val name: String get() = name
 
     override fun equals(other: Any?): Boolean = when (other) {
@@ -84,5 +82,5 @@ public inline fun StreamBehavior(
 
     override fun hashCode(): Int = arrayOf(name).contentHashCode()
 
-    override fun toString(): String = "StreamBehavior(name=$name, client=$client)"
+    override fun toString(): String = "StreamBehavior(name=$name, client=${this.client})"
 }

@@ -1,10 +1,7 @@
-package nats.jetstream.client
+package nats.jetstream.client.stream
 
 import nats.jetstream.api.JetStreamApiException
 import nats.jetstream.api.catchNotFound
-import nats.jetstream.entity.Consumer
-import nats.jetstream.entity.behavior.ConsumerBehavior
-import nats.jetstream.entity.behavior.StreamBehavior
 import nats.jetstream.protocol.ConsumerCreateRequest
 import kotlin.contracts.ExperimentalContracts
 import kotlin.contracts.InvocationKind

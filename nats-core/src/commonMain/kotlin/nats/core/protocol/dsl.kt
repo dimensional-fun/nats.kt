@@ -53,4 +53,4 @@ public fun Publication.toBuilder(): PublicationBuilder {
  * Whether this [Delivery] is to signify no-responders.
  */
 public val Delivery.isNoResponders: Boolean
-    get() = intoOrNull<Operation.MsgWithHeaders>()?.header?.contains("503") ?: false
+    get() = intoOrNull<Operation.MsgWithHeaders>()?.statusText?.contains("503") ?: false

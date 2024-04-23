@@ -8,7 +8,8 @@ import nats.core.protocol.optional.OptionalBoolean
 import nats.core.protocol.optional.OptionalInt
 import nats.core.protocol.optional.OptionalLong
 import nats.core.protocol.optional.delegate.delegate
-import nats.jetstream.protocol.domain.ConsumerDeliveryPolicy.*
+import nats.jetstream.protocol.domain.ConsumerDeliveryPolicy.ByStartSequence
+import nats.jetstream.protocol.domain.ConsumerDeliveryPolicy.ByStartTime
 import nats.jetstream.tools.DurationAsNanoseconds
 
 @Serializable

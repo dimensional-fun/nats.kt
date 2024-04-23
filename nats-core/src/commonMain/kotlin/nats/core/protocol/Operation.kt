@@ -205,7 +205,7 @@ public sealed interface Operation {
         override val sid: String,
         override val replyTo: Subject?,
         override val headers: Headers,
-        val header: String,
+        val statusText: String,
         private val packet: ByteReadPacket?,
     ) : Delivery, Operation {
         override val tag: String get() = "HMSG"

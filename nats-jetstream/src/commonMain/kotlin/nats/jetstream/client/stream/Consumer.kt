@@ -1,7 +1,6 @@
-package nats.jetstream.entity
+package nats.jetstream.client.stream
 
 import nats.jetstream.client.JetStreamClient
-import nats.jetstream.entity.behavior.ConsumerBehavior
 import nats.jetstream.protocol.domain.ConsumerInfo
 
 public class Consumer(
@@ -15,5 +14,4 @@ public class Consumer(
     override suspend fun resolveOrNull(): Consumer = this
 
     override fun toString(): String = "Consumer(stream=$streamName, name=$name, data=$data, client=$client)"
-
 }

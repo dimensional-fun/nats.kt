@@ -1,4 +1,4 @@
-package nats.jetstream.client
+package nats.jetstream.client.kv
 
 import nats.jetstream.protocol.domain.*
 import kotlin.contracts.ExperimentalContracts
@@ -7,7 +7,11 @@ import kotlin.contracts.contract
 import kotlin.time.Duration
 
 @Suppress("MemberVisibilityCanBePrivate")
-public data class BucketConfiguration(
+public data class KeyValueBucketConfiguration(
+    /**
+     * The name of the bucket.
+     */
+    val name: String,
     /**
      * The maximum age for a value in this bucket.
      */
@@ -49,7 +53,7 @@ public data class BucketConfiguration(
     /**
      * Apply this configuration to a stream builder.
      */
-    public fun applyTo(builder: StreamConfig.Builder)    {
+    public fun applyTo(builder: StreamConfig.Builder) {
         builder.allowRollupHeaders = true
         builder.allowDirect = true
         builder.discard = StreamDiscardType.New
@@ -57,18 +61,18 @@ public data class BucketConfiguration(
 
         when {
             mirror != null       -> builder.mirror = when {
-                Bucket.hasPrefix(mirror.name) -> mirror
-                !Bucket.hasPrefix(mirror.name) -> mirror.copy(name = Bucket.prefix(mirror.name))
-                else -> mirror
+                KeyValueBucket.hasPrefix(mirror.name)  -> mirror
+                !KeyValueBucket.hasPrefix(mirror.name) -> mirror.copy(name = KeyValueBucket.prefix(mirror.name))
+                else                                   -> mirror
             }
 
             sources.isNotEmpty() -> for (source in sources) builder.source(when {
-                Bucket.hasPrefix(source.name) -> source
-                !Bucket.hasPrefix(source.name) -> source.copy(name = Bucket.prefix(source.name))
-                else -> source
+                KeyValueBucket.hasPrefix(source.name)  -> source
+                !KeyValueBucket.hasPrefix(source.name) -> source.copy(name = KeyValueBucket.prefix(source.name))
+                else                                   -> source
             })
 
-            else -> builder.subjects = listOf(Bucket.subject(builder.name) + ">")
+            else -> builder.subjects = listOf(KeyValueBucket.subject(name) + ">")
         }
 
         builder.maxAge = ttl
@@ -80,7 +84,7 @@ public data class BucketConfiguration(
         builder.maxMessageSize = maxValueSize
     }
 
-    public class Builder {
+    public class Builder(public val name: String) {
         public var ttl: Duration = Duration.ZERO
 
         public var maxValueSize: Int = -1
@@ -103,13 +107,13 @@ public data class BucketConfiguration(
             sources.add(source)
         }
 
-        public fun build(): BucketConfiguration = BucketConfiguration(ttl, maxValueSize, maxBucketSize, replicaCount, storageType, placement, mirror, republish, sources)
+        public fun build(): KeyValueBucketConfiguration = KeyValueBucketConfiguration(name, ttl, maxValueSize, maxBucketSize, replicaCount, storageType, placement, mirror, republish, sources)
     }
 }
 
 
 @OptIn(ExperimentalContracts::class)
-public inline fun BucketConfiguration.Builder.mirror(
+public inline fun KeyValueBucketConfiguration.Builder.mirror(
     name: String,
     block: StreamMirror.Builder.() -> Unit,
 ) {
@@ -118,7 +122,7 @@ public inline fun BucketConfiguration.Builder.mirror(
 }
 
 @OptIn(ExperimentalContracts::class)
-public inline fun BucketConfiguration.Builder.republish(
+public inline fun KeyValueBucketConfiguration.Builder.republish(
     src: String,
     dest: String,
     block: StreamRepublishConfiguration.Builder.() -> Unit
@@ -131,7 +135,7 @@ public inline fun BucketConfiguration.Builder.republish(
  *
  */
 @OptIn(ExperimentalContracts::class)
-public inline fun BucketConfiguration.Builder.source(
+public inline fun KeyValueBucketConfiguration.Builder.source(
     name: String,
     block: StreamMirror.Builder.() -> Unit,
 ) {

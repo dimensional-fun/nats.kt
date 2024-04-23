@@ -3,7 +3,7 @@ package nats.jetstream.api
 import nats.core.protocol.Subject
 import nats.core.protocol.json
 import nats.jetstream.protocol.*
-import nats.jetstream.protocol.domain.*
+import nats.jetstream.protocol.domain.ConsumerInfo
 import kotlin.jvm.JvmInline
 
 @JvmInline

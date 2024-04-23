@@ -2,7 +2,7 @@ package nats.jetstream.protocol
 
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
-import nats.jetstream.protocol.domain.*
+import nats.jetstream.protocol.domain.StreamInfo
 import kotlin.jvm.JvmInline
 
 @JvmInline

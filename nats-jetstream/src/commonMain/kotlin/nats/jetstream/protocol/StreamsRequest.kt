@@ -1,9 +1,9 @@
 package nats.jetstream.protocol
 
 import kotlinx.serialization.Serializable
-import nats.core.protocol.optional.delegate.delegate
 import nats.core.protocol.optional.Optional
 import nats.core.protocol.optional.OptionalInt
+import nats.core.protocol.optional.delegate.delegate
 
 @Serializable
 public data class StreamsRequest(

@@ -3,7 +3,7 @@ package nats.jetstream.api
 import nats.core.client.request
 import nats.core.protocol.Subject
 import nats.core.protocol.json
-import nats.jetstream.entity.MessageInfo
+import nats.jetstream.client.stream.MessageInfo
 import nats.jetstream.protocol.StreamMessageGetRequest
 import kotlin.contracts.ExperimentalContracts
 import kotlin.contracts.InvocationKind

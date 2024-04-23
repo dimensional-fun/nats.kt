@@ -1,4 +1,4 @@
-package nats.jetstream.entity
+package nats.jetstream.client.stream
 
 import io.ktor.http.*
 import io.ktor.util.*

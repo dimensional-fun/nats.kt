@@ -10,7 +10,7 @@ import nats.core.protocol.json
 import nats.core.protocol.read
 import nats.core.tools.Json
 import nats.jetstream.client.jetstream
-import nats.jetstream.client.set
+import nats.jetstream.client.kv.set
 
 public val NATS_SERVER_ADDR: String = Environment["NATS_SERVER_ADDR"].unwrapOr("127.0.0.1")
 
@@ -19,10 +19,9 @@ public suspend fun test(transport: TransportFactory): Unit = coroutineScope {
         this.transport = transport
     }
 
-    val kv = client.jetstream.kv["test"]
+    client.jetstream.kv["test"].remove()
 
-    println("delete")
-    kv.delete("test")
+    val kv = client.jetstream.kv.create("test")
 
     println("sets")
     val seq = kv.set("test") {

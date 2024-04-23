@@ -1,7 +1,6 @@
-package nats.jetstream.entity
+package nats.jetstream.client.stream
 
 import nats.jetstream.client.JetStreamClient
-import nats.jetstream.entity.behavior.StreamBehavior
 import nats.jetstream.protocol.domain.StreamInfo
 
 public class Stream(

@@ -1,10 +1,9 @@
-package nats.jetstream.client
+package nats.jetstream.client.stream
 
 import nats.jetstream.api.JetStreamApiException
 import nats.jetstream.api.StreamsApi
 import nats.jetstream.api.catchNotFound
-import nats.jetstream.entity.Stream
-import nats.jetstream.entity.behavior.StreamBehavior
+import nats.jetstream.client.JetStreamClient
 import nats.jetstream.protocol.StreamCreateRequest
 import nats.jetstream.protocol.StreamInfoRequest
 import nats.jetstream.protocol.StreamsRequest
@@ -12,10 +11,10 @@ import nats.jetstream.protocol.domain.StreamConfig
 import kotlin.contracts.ExperimentalContracts
 import kotlin.contracts.InvocationKind
 import kotlin.contracts.contract
+import kotlin.jvm.JvmInline
 
-public interface StreamsClient {
-    public val client: JetStreamClient
-
+@JvmInline
+public value class StreamsClient(public val client: JetStreamClient) {
     /**
      * The [StreamsApi] instance used by this [StreamsClient] instance.
      */
@@ -26,7 +25,7 @@ public interface StreamsClient {
      *
      * @param name The name of the Stream
      */
-    public operator fun get(name: String): StreamBehavior
+    public operator fun get(name: String): StreamBehavior = StreamBehavior(client, name)
 }
 
 /**

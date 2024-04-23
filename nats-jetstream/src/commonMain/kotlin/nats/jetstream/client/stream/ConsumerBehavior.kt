@@ -1,8 +1,7 @@
-package nats.jetstream.entity.behavior
+package nats.jetstream.client.stream
 
 import nats.jetstream.api.JetStreamApiException
 import nats.jetstream.client.JetStreamClient
-import nats.jetstream.entity.Consumer
 import nats.jetstream.entity.JetStreamEntity
 
 public interface ConsumerBehavior : JetStreamEntity {

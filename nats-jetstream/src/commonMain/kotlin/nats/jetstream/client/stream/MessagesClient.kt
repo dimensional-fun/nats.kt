@@ -1,16 +1,16 @@
-package nats.jetstream.client
+package nats.jetstream.client.stream
 
 import kotlinx.coroutines.withTimeout
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.decodeFromJsonElement
 import naibu.serialization.DefaultFormats
 import nats.core.client.request
-import nats.core.protocol.*
 import nats.core.protocol.Delivery.Companion.charsetHint
+import nats.core.protocol.Subject
+import nats.core.protocol.read
 import nats.core.tools.Json
 import nats.jetstream.api.JetStreamApiException
-import nats.jetstream.entity.MessageInfo
-import nats.jetstream.entity.behavior.StreamBehavior
+import nats.jetstream.api.catchNotFound
 import nats.jetstream.protocol.Error
 import nats.jetstream.protocol.StreamMessageGetRequest
 import nats.jetstream.protocol.StreamPublication
@@ -30,11 +30,7 @@ public value class MessagesClient(public val stream: StreamBehavior) {
      * @return The message info, or `null` if the message does not exist.
      * @throws JetStreamApiException If the JetStream API returns an error.
      */
-    public suspend fun get(request: StreamMessageGetRequest): MessageInfo? = try {
-        fetch(request)
-    } catch (ex: JetStreamApiException) {
-        if (ex.data.errCode == 10037) null else throw ex
-    }
+    public suspend fun get(request: StreamMessageGetRequest): MessageInfo? = catchNotFound { fetch(request) }
 
     /**
      * Fetch a message from the stream.
