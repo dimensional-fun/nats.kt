@@ -1,5 +1,5 @@
 kotlin {
-    mingwX64()
+//    mingwX64()
 
     sourceSets["commonMain"].dependencies {
         implementation("org.kotlincrypto:secure-random:0.1.0")

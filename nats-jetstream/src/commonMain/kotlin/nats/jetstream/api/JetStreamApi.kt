@@ -1,12 +1,14 @@
 package nats.jetstream.api
 
 import io.ktor.http.*
+import kotlinx.coroutines.withTimeout
 import kotlinx.serialization.ExperimentalSerializationApi
 import kotlinx.serialization.InternalSerializationApi
 import kotlinx.serialization.serializer
 import naibu.ext.intoOrNull
 import naibu.serialization.DefaultFormats
 import naibu.serialization.json.Json
+import naibu.text.charset.Charsets
 import nats.core.client.Client
 import nats.core.client.request
 import nats.core.protocol.PublicationBuilder
@@ -15,10 +17,13 @@ import nats.jetstream.protocol.ErrorResponse
 import nats.jetstream.protocol.Response
 import nats.jetstream.protocol.ResponseSerializer
 import kotlin.jvm.JvmInline
+import kotlin.time.Duration.Companion.seconds
 
 @JvmInline
 public value class JetStreamApi(public val core: Client) {
     public val subject: Subject get() = Subject("\$JS.API")
+
+    public val direct: DirectApi get() = DirectApi(this)
 
     public val streams: StreamsApi get() = StreamsApi(this)
 
@@ -34,13 +39,14 @@ public value class JetStreamApi(public val core: Client) {
         subject: Subject,
         block: PublicationBuilder.() -> Unit = {},
     ): Response {
-        val msg = core.request(subject) {
-            header(HttpHeaders.Accept, "application/json")
-            block()
+        val msg = withTimeout(1.seconds) {
+            core.request (subject) {
+                header(HttpHeaders.Accept, "application/json")
+                block()
+            }
         }
 
-        val resp = msg.read(ResponseSerializer, DefaultFormats.Json)
-           ?: error("Couldn't deserialize JetStream response?")
+        val resp = msg.read(ResponseSerializer, DefaultFormats.Json, Charsets.UTF_8)
 
         return if (resp is ErrorResponse) throw JetStreamApiException(resp.error) else resp
     }

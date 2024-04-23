@@ -1,6 +1,7 @@
 package nats.core.protocol
 
 import kotlinx.serialization.KSerializer
+import kotlinx.serialization.Serializable
 import kotlinx.serialization.descriptors.PrimitiveKind
 import kotlinx.serialization.descriptors.PrimitiveSerialDescriptor
 import kotlinx.serialization.descriptors.SerialDescriptor
@@ -12,8 +13,11 @@ import kotlin.jvm.JvmInline
  * A NATS subject.
  */
 @JvmInline
+@Serializable(with = Subject.Serializer::class)
 public value class Subject(public val value: String) {
     public operator fun plus(other: String): Subject = Subject("$value.$other")
+
+    public operator fun plus(other: Subject): Subject = Subject("$value.${other.value}")
 
     override fun toString(): String = value
 

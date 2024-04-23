@@ -4,15 +4,9 @@ import nats.jetstream.api.catchNotFound
 import nats.jetstream.api.JetStreamApiException
 import nats.jetstream.client.ConsumersClient
 import nats.jetstream.client.JetStreamClient
+import nats.jetstream.client.MessagesClient
 import nats.jetstream.client.fetch
-import nats.jetstream.entity.Consumer
 import nats.jetstream.entity.Stream
-import nats.jetstream.protocol.ConsumerCreateRequest
-import nats.jetstream.protocol.domain.ConsumerConfig
-import kotlin.contracts.ExperimentalContracts
-import kotlin.contracts.InvocationKind
-import kotlin.contracts.contract
-import kotlin.jvm.JvmInline
 
 public interface StreamBehavior {
     /**
@@ -29,6 +23,8 @@ public interface StreamBehavior {
      * The consumers manager for this [StreamBehavior] instance.
      */
     public val consumers: ConsumersClient get() = ConsumersClient(this)
+
+    public val messages: MessagesClient get() = MessagesClient(this)
 
     /**
      * Get the [Stream] instance for this behavior, or fetch if this is not a state-ful instance.

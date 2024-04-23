@@ -17,6 +17,11 @@ public interface JetStreamClient {
     //
 
     /**
+     * The key-value store manager for this [JetStream Client][JetStreamClient].
+     */
+    public val kv: BucketStore
+
+    /**
      * The streams manager for this [JetStream Client][JetStreamClient].
      */
     public val streams: StreamsClient
