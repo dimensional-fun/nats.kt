@@ -5,7 +5,6 @@ import nats.jetstream.api.JetStreamApi
 import nats.jetstream.client.BucketStore
 import nats.jetstream.client.JetStreamClient
 import nats.jetstream.client.StreamsClient
-//import nats.jetstream.protocol.StreamCreateRequest
 import kotlin.jvm.JvmInline
 
 @JvmInline
